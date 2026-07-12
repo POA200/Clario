@@ -1,23 +1,25 @@
 import { Navbar } from "@/components/layout/Navbar";
-import { Container } from "@/components/shared/Container";
+import { Footer } from "@/components/layout/Footer";
+import { HowItWorks } from "@/components/sections/HowItWorks";
+import { BuiltWith } from "@/components/sections/BuiltWith";
+import { Features } from "@/components/sections/Features";
+import { FAQs } from "@/components/sections/FAQs";
+import { FinalCTA } from "@/components/sections/FinalCTA";
+import { Hero } from "@/components/sections/Hero";
+import { WhyClario } from "@/components/sections/WhyClario";
 
 export default function HomePage() {
   return (
-    <>
+    <main>
       <Navbar />
-
-      <main>
-        <Container className="py-20">
-          <h1 className="max-w-3xl text-6xl font-bold tracking-tight">
-            Team communication built for students.
-          </h1>
-
-          <p className="mt-6 max-w-xl text-xl text-muted-foreground">
-            Clario helps student teams communicate, collaborate, and manage
-            projects in one beautiful workspace.
-          </p>
-        </Container>
-      </main>
-    </>
+      <Hero />
+      <BuiltWith />
+      <Features />
+      <WhyClario />
+      <HowItWorks />
+      <FAQs />
+      <FinalCTA />
+      <Footer />
+    </main>
   );
 }
