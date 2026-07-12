@@ -1,33 +1,24 @@
+import Image from "next/image";
 import Link from "next/link";
-import type { ComponentPropsWithoutRef } from "react";
 
-import { cn } from "@/lib/utils";
+interface LogoProps {
+  href?: string;
+}
 
-type LogoProps = ComponentPropsWithoutRef<typeof Link> & {
-  label?: string;
-};
-
-function Logo({
-  className,
-  label = "Clario",
-  href = "/",
-  ...props
-}: LogoProps) {
+export function Logo({ href = "/" }: LogoProps) {
   return (
     <Link
       href={href}
-      className={cn(
-        "inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground",
-        className,
-      )}
-      {...props}
+      className="inline-flex items-center transition-opacity hover:opacity-80"
     >
-      <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-background">
-        C
-      </span>
-      <span>{label}</span>
+      <Image
+        src="/logos/clario-logo.svg"
+        alt="Clario"
+        width={140}
+        height={40}
+        priority
+        className="h-12 w-auto"
+      />
     </Link>
   );
 }
-
-export { Logo };
