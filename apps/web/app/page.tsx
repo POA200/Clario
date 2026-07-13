@@ -7,6 +7,7 @@ import { FAQs } from "@/components/sections/FAQs";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 import { Hero } from "@/components/sections/Hero";
 import { WhyClario } from "@/components/sections/WhyClario";
+import { AppPreview } from "@/components/sections/AppPreview";
 
 export default function HomePage() {
   return (
@@ -16,6 +17,7 @@ export default function HomePage() {
       <BuiltWith />
       <Features />
       <WhyClario />
+      <AppPreview />
       <HowItWorks />
       <FAQs />
       <FinalCTA />
