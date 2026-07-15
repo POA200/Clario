@@ -4,7 +4,7 @@
 
 <img src="./apps/web/public/logos/clario-logo.svg" alt="Clario Logo" width="120" />
 
-### Team communication, collaboration, and productivity—reimagined.
+### Team communication, collaboration, and productivity reimagined.
 
 Modern messaging built for teams to chat, organize work, manage tasks, and stay connected in one beautiful mobile experience.
 
@@ -226,7 +226,6 @@ Clario follows a simple philosophy:
 
 - [ ] Channels
 - [ ] Real-time messaging
-- [ ] File sharing
 
 ---
 
@@ -238,25 +237,9 @@ Clario follows a simple philosophy:
 
 ---
 
-# 🤝 Contributing
-
-Contributions are welcome.
-
-If you'd like to contribute:
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Commit your changes.
-4. Push your branch.
-5. Open a Pull Request.
-
----
-
 # 📄 License
 
 This project is licensed under the MIT License.
-
-See the LICENSE file for more information.
 
 ---
 
