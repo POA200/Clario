@@ -1,159 +1,275 @@
-# Turborepo starter
+# Clario
 
-This Turborepo starter is maintained by the Turborepo core team.
+<div align="center">
 
-## Using this example
+<img src="./apps/web/public/logos/clario-logo.svg" alt="Clario Logo" width="120" />
 
-Run the following command:
+### Team communication, collaboration, and productivity—reimagined.
 
-```sh
-npx create-turbo@latest
+Modern messaging built for teams to chat, organize work, manage tasks, and stay connected in one beautiful mobile experience.
+
+[Website](https://clario-tma.vercel.app) • [Documentation](./apps/docs) • [Report Bug](../../issues) • [Request Feature](../../issues)
+
+</div>
+
+---
+
+## ✨ Overview
+
+Clario is a modern mobile-first team communication platform designed to simplify collaboration.
+
+Instead of switching between multiple applications for messaging, task management, announcements, and team organization, Clario brings everything together into one seamless experience.
+
+The project consists of:
+
+- 📱 A mobile application built with Expo and React Native.
+- 🌐 A responsive marketing website built with Next.js.
+- 📚 Documentation for developers and contributors.
+- 📦 A shared monorepo architecture for scalability.
+
+---
+
+## 🚀 Features
+
+### Messaging
+
+- Real-time team chat
+- Direct Messages
+- Group conversations
+- Read receipts
+- Message reactions
+- Media sharing
+
+### Team Collaboration
+
+- Team creation
+- Invite members
+- Role management
+- Announcements
+- Shared workspaces
+
+### Productivity
+
+- Task management
+- Assign tasks
+- Due dates
+- Progress tracking
+- Team organization
+
+### User Experience
+
+- Beautiful modern interface
+- Responsive landing page
+- Dark mode
+- Fast performance
+- Smooth animations
+
+---
+
+# 🏗 Project Structure
+
+```text
+clario/
+│
+├── apps/
+│   ├── mobile/        # Expo React Native application
+│   ├── web/           # Next.js landing page
+│   └── docs/          # Documentation
+│
+├── packages/
+│   ├── ui/            # Shared UI components
+│   ├── eslint-config/
+│   └── typescript-config/
+│
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+# 🛠 Tech Stack
 
-### Apps and Packages
+## Mobile
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- Expo SDK 57
+- React Native
+- Expo Router
+- TypeScript
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Web
 
-### Utilities
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui
 
-This Turborepo has some additional tools already setup for you:
+## Tooling
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- Turborepo
+- pnpm Workspaces
+- ESLint
+- Prettier
 
-### Build
+---
 
-To build all apps and packages, run the following command:
+# ⚡ Getting Started
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Prerequisites
 
-```sh
-cd my-turborepo
-turbo build
+- Node.js 22+
+- pnpm
+- Git
+
+---
+
+## Clone the repository
+
+```bash
+git clone https://github.com/POA200/Clario.git
+
+cd Clario
 ```
 
-Without global `turbo`, use your package manager:
+---
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+## Install dependencies
+
+```bash
+pnpm install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Run the web app
 
-```sh
-turbo build --filter=docs
+```bash
+pnpm --filter web dev
 ```
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+## Run the mobile app
+
+```bash
+pnpm --filter mobile start
 ```
 
-### Develop
+---
 
-To develop all apps and packages, run the following command:
+# 📂 Applications
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Web
 
-```sh
-cd my-turborepo
-turbo dev
-```
+The web application serves as Clario's public website.
 
-Without global `turbo`, use your package manager:
+Features include:
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+- Landing page
+- Product showcase
+- Responsive design
+- Download links
+- Marketing pages
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Mobile
 
-```sh
-turbo dev --filter=web
-```
+The mobile application is the core product.
 
-Without global `turbo`:
+Features include:
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+- Authentication
+- Team management
+- Messaging
+- Tasks
+- Profile
+- Notifications
 
-### Remote Caching
+---
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+# 🎨 Design Principles
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+Clario follows a simple philosophy:
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+- Clean
+- Modern
+- Accessible
+- Fast
+- Mobile-first
+- Minimal distractions
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+---
 
-```sh
-cd my-turborepo
-turbo login
-```
+# 🛣 Roadmap
 
-Without global `turbo`, use your package manager:
+## Phase 1
 
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
+- [x] Turborepo setup
+- [x] Landing page
+- [x] Mobile project setup
+- [ ] Design system
+- [ ] Onboarding
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+---
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## Phase 2
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+- [ ] Authentication
+- [ ] Team creation
+- [ ] Team invitations
 
-```sh
-turbo link
-```
+---
 
-Without global `turbo`:
+## Phase 3
 
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
+- [ ] Channels
+- [ ] Real-time messaging
+- [ ] File sharing
 
-## Useful Links
+---
 
-Learn more about the power of Turborepo:
+## Phase 4
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- [ ] Tasks
+- [ ] Notifications
+- [ ] User settings
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome.
+
+If you'd like to contribute:
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push your branch.
+5. Open a Pull Request.
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+See the LICENSE file for more information.
+
+---
+
+# 👨‍💻 Author
+
+**Peter Oluwaseyi**
+
+- GitHub: https://github.com/POA200
+
+---
+
+<div align="center">
+
+Built with ❤️ using Expo, Next.js and Turborepo.
+
+</div>
