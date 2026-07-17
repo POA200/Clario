@@ -3,5 +3,5 @@ export const Radius = {
   md: 10,
   lg: 16,
   xl: 24,
-  full: 9999,
-};
+  full: 999,
+} as const;
