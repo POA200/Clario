@@ -1,23 +1,28 @@
-import { ReactNode } from "react";
-import { SafeAreaView, ScrollView, View, type ViewStyle } from "react-native";
+import { SafeAreaView, ScrollView, View, ViewProps } from "react-native";
 
-type ScreenProps = {
-  children: ReactNode;
+import { Colors } from "@/constants";
+
+interface ScreenProps extends ViewProps {
   scroll?: boolean;
-  style?: ViewStyle;
-};
+  children: React.ReactNode;
+}
 
 export function Screen({ children, scroll = false, style }: ScreenProps) {
   if (scroll) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: Colors.background,
+        }}
+      >
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
-            padding: 20,
+            padding: 24,
           }}
         >
-          <View style={style}>{children}</View>
+          {children}
         </ScrollView>
       </SafeAreaView>
     );
@@ -25,15 +30,22 @@ export function Screen({ children, scroll = false, style }: ScreenProps) {
 
   return (
     <SafeAreaView
-      style={[
-        {
-          flex: 1,
-          padding: 20,
-        },
-        style,
-      ]}
+      style={{
+        flex: 1,
+        backgroundColor: Colors.background,
+      }}
     >
-      {children}
+      <View
+        style={[
+          {
+            flex: 1,
+            padding: 24,
+          },
+          style,
+        ]}
+      >
+        {children}
+      </View>
     </SafeAreaView>
   );
 }
