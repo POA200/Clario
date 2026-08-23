@@ -1,0 +1,24 @@
+import Link from "next/link";
+
+import { ClarioLogo } from "@/components/common/ClarioLogo";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export default function OnboardingPage() {
+  return (
+    <main className="min-h-dvh bg-background p-4">
+      <div className="relative flex min-h-[calc(100dvh-2rem)] items-center justify-center rounded-[24px] bg-primary">
+        <ClarioLogo inverse />
+        <Link
+          href="/login"
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "absolute bottom-8 left-1/2 -translate-x-1/2 bg-background px-10 text-primary hover:bg-background/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-background",
+          )}
+        >
+          Next
+        </Link>
+      </div>
+    </main>
+  );
+}
