@@ -1,0 +1,7 @@
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter app build",
+  "devCommand": "pnpm --filter app dev",
+  "outputDirectory": "apps/app/.next"
+}
