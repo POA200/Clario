@@ -1,5 +1,9 @@
-import { DashboardScreen } from "@/components/dashboard/DashboardScreen";
+import { redirect } from "next/navigation";
+
+import { getDefaultTeamId } from "@/services/team-service";
 
 export default function TeamsPage() {
-  return <DashboardScreen />;
+  const teamId = getDefaultTeamId();
+  if (!teamId) redirect("/dashboard");
+  redirect(`/teams/${teamId}`);
 }
