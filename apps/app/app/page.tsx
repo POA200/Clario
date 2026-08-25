@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ClarioLogo } from "@/components/common/ClarioLogo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 
 export default function OnboardingPage() {
   return (
@@ -16,7 +17,8 @@ export default function OnboardingPage() {
             "absolute bottom-8 left-1/2 -translate-x-1/2 bg-background px-10 text-primary hover:bg-background/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-background",
           )}
         >
-          Next
+          Continue to Clario
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
       </div>
     </main>

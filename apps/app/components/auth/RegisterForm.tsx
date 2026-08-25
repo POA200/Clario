@@ -1,25 +1,46 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
+import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function RegisterForm() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
 
-    void name;
-    void username;
-    void email;
-    void password;
-    void confirmPassword;
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const response = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, username, email, password }),
+    });
+
+    const result = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setError(result.error ?? "Unable to create your account.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    router.push("/login?registered=1");
   }
 
   return (
@@ -93,10 +114,21 @@ export function RegisterForm() {
 
       <Button
         type="submit"
+        disabled={isSubmitting}
         className="h-12 w-full rounded-lg text-base font-normal"
       >
-        Sign Up
+        {isSubmitting ? "Creating account..." : "Sign Up"}
       </Button>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <GoogleButton />
     </form>
   );
 }

@@ -2,8 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
+import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -11,9 +13,26 @@ export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError("Invalid email or password.");
+      setIsSubmitting(false);
+      return;
+    }
+
     router.push("/dashboard");
   }
 
@@ -45,7 +64,7 @@ export function LoginForm() {
         />
       </div>
 
-      <div className="-mt-3 text-right md:-mt-4">
+      <div className="-mt-3 text-right md:mt-0">
         <Link
           href="/forgot-password"
           className="text-sm text-primary hover:underline md:text-lg"
@@ -56,10 +75,21 @@ export function LoginForm() {
 
       <Button
         type="submit"
-        className="h-12 w-full rounded-lg text-base font-normal md:h-[90px] md:rounded-xl md:text-3xl"
+        disabled={isSubmitting}
+        className="h-12 w-full rounded-lg text-base font-normal md:h-14 md:rounded-xl md:text-xl"
       >
-        Login
+        {isSubmitting ? "Logging in..." : "Login"}
       </Button>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <GoogleButton />
     </form>
   );
 }
