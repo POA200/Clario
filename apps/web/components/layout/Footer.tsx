@@ -26,7 +26,7 @@ function Footer() {
             </Link>
 
             <Link
-              href="/#faq"
+              href="/#faqs"
               className="text-2xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary sm:text-3xl lg:text-[2.2rem]"
             >
               FAQ

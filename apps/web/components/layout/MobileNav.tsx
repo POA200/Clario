@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Menu } from "lucide-react";
 
-import { navigation } from "@/lib/navigation";
+import { clarioAppUrl, navigation } from "@/lib/navigation";
 import {
   Sheet,
   SheetClose,
@@ -54,10 +54,11 @@ export function MobileNav() {
               <Button
                 className="w-full justify-between rounded-lg px-5"
                 size="lg"
+                render={<a href={clarioAppUrl} />}
               />
             }
           >
-            Get Clario
+            Use Clario
             <ArrowUpRight className="size-4" />
           </SheetClose>
         </SheetFooter>

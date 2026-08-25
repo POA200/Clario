@@ -36,7 +36,7 @@ const previews = [
 
 export function AppPreview() {
   return (
-    <section className="py-20 lg:py-28">
+    <section id="screens" className="py-20 lg:py-28">
       <Container>
         <div className="space-y-10 lg:space-y-14">
           <div className="mx-auto max-w-3xl text-center">

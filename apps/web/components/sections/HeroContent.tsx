@@ -1,7 +1,6 @@
-import Image from "next/image";
-
 import { Button } from "@/components/ui/button";
 import { DownloadIcon } from "lucide-react";
+import { clarioAppUrl } from "@/lib/navigation";
 
 export function HeroContent() {
   return (
@@ -24,15 +23,17 @@ export function HeroContent() {
         <Button
           size="lg"
           className="w-full sm:w-auto rounded-lg p-6 cursor-pointer"
+          render={<a href={clarioAppUrl} />}
         >
           <DownloadIcon className="mr-2 h-4 w-4" />
-          Download App
+          Use Clario
         </Button>
 
         <Button
           size="lg"
           variant="outline"
           className="w-full sm:w-auto rounded-lg p-6 cursor-pointer"
+          render={<a href="#features" />}
         >
           Learn More
         </Button>

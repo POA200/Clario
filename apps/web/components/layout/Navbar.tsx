@@ -5,7 +5,7 @@ import { Container } from "@/components/shared/Container";
 import { Logo } from "@/components/shared/Logo";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
-import { navigation } from "@/lib/navigation";
+import { clarioAppUrl, navigation } from "@/lib/navigation";
 
 export function Navbar() {
   return (
@@ -26,8 +26,12 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex">
-          <Button size="lg" className="gap-2 px-5 rounded-lg">
-            Get Clario
+          <Button
+            size="lg"
+            className="gap-2 px-5 rounded-lg"
+            render={<a href={clarioAppUrl} />}
+          >
+            Use Clario
             <ArrowUpRight className="size-4" />
           </Button>
         </div>

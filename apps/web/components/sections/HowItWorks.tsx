@@ -5,7 +5,7 @@ import { HowItWorksGrid } from "@/components/sections/HowItWorksGrid";
 
 export function HowItWorks() {
   return (
-    <section id="screens" className="py-20 lg:py-28">
+    <section id="how-it-works" className="py-20 lg:py-28">
       <Container>
         <div className="space-y-12 lg:space-y-16">
           <HowItWorksHeader />

@@ -32,7 +32,7 @@ const faqs = [
 
 export function FAQs() {
   return (
-    <section id="faq" className="py-20 lg:py-28">
+    <section id="faqs" className="py-20 lg:py-28">
       <Container>
         <div className="grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
           <div className="max-w-xl text-center lg:text-left">
