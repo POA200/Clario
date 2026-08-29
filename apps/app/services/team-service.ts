@@ -1,28 +1,121 @@
-import { MOCK_TEAMS, TEAM_STORAGE_KEY } from "@/data/teams";
-import type { Team } from "@/types/team";
+import "server-only";
 
-export async function getTeam(teamId: string): Promise<Team | null> {
-  return MOCK_TEAMS.find((team) => team.id === teamId) ?? null;
+import { prisma } from "@/lib/prisma";
+import type { Team, TeamChannel } from "@/types/team";
+
+const VALID_CHANNEL_ICONS = [
+  "messages",
+  "announcement",
+  "design",
+  "development",
+] as const;
+
+function mapChannel(channel: {
+  id: string;
+  name: string;
+  icon: string;
+}): TeamChannel {
+  const icon = VALID_CHANNEL_ICONS.includes(
+    channel.icon as (typeof VALID_CHANNEL_ICONS)[number],
+  )
+    ? (channel.icon as TeamChannel["icon"])
+    : "messages";
+
+  return {
+    id: channel.id,
+    name: channel.name,
+    icon,
+    unread: false,
+  };
 }
 
-export function getDefaultTeamId(): string | null {
-  return MOCK_TEAMS[0]?.id ?? null;
+export async function getUserTeams(userId: string): Promise<Team[]> {
+  const teams = await prisma.team.findMany({
+    where: {
+      members: {
+        some: {
+          userId,
+        },
+      },
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
+      channels: {
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return teams.map((team) => ({
+    id: team.id,
+    name: team.name,
+    memberCount: team.members.length,
+    members: team.members.map((member) => ({
+      id: member.id,
+      userId: member.userId,
+      name: member.user.name ?? member.user.email,
+      role: member.userId === team.creatorId ? "Owner" : "Member",
+      status: "offline",
+      avatar: member.user.image ?? undefined,
+    })),
+    channels: team.channels.map(mapChannel),
+  }));
 }
 
-export function getLastOpenedTeamId(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TEAM_STORAGE_KEY);
-}
+export async function getTeam(
+  teamId: string,
+  userId: string,
+): Promise<Team | null> {
+  const team = await prisma.team.findFirst({
+    where: {
+      id: teamId,
+      ...(userId
+        ? {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          }
+        : {}),
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
+      channels: {
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+  });
 
-export function rememberTeam(teamId: string): void {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(TEAM_STORAGE_KEY, teamId);
-  }
-}
+  if (!team) return null;
 
-export function getTeamNavigationId(): string | null {
-  const lastOpenedTeamId = getLastOpenedTeamId();
-  return MOCK_TEAMS.some((team) => team.id === lastOpenedTeamId)
-    ? lastOpenedTeamId
-    : getDefaultTeamId();
+  return {
+    id: team.id,
+    name: team.name,
+    memberCount: team.members.length,
+    members: team.members.map((member) => ({
+      id: member.id,
+      userId: member.userId,
+      name: member.user.name ?? member.user.email,
+      role: member.userId === team.creatorId ? "Owner" : "Member",
+      status: "offline",
+      avatar: member.user.image ?? undefined,
+    })),
+    channels: team.channels.map(mapChannel),
+  };
 }

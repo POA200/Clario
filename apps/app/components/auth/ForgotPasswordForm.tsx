@@ -10,12 +10,33 @@ import { cn } from "@/lib/utils";
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
 
-    // Authentication will be connected later.
-    setSubmitted(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const result = (await response.json()) as { error?: string };
+        setError(result.error ?? "Unable to send a reset link right now.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setError("Unable to send a reset link right now.");
+      setIsSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -63,9 +84,11 @@ export function ForgotPasswordForm() {
         />
       </div>
 
-      <Button type="submit" className="w-full">
-        Send reset link
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : "Send reset link"}
       </Button>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="text-center">
         <Link

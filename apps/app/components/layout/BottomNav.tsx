@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { MOBILE_NAVIGATION } from "@/data/navigation";
-import { getTeamNavigationId } from "@/services/team-service";
+import { getTeamNavigationId } from "@/services/team-client";
 
 export function BottomNav() {
   const pathname = usePathname();

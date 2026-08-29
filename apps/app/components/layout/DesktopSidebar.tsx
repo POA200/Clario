@@ -6,7 +6,7 @@ import { UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { DASHBOARD_NAVIGATION } from "@/data/navigation";
-import { getTeamNavigationId } from "@/services/team-service";
+import { getTeamNavigationId } from "@/services/team-client";
 
 function LogoMark() {
   return (

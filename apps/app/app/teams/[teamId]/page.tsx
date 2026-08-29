@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { TeamScreen } from "@/components/team/TeamScreen";
+import { getCurrentUser } from "@/lib/auth";
 import { getTeam } from "@/services/team-service";
 
 type TeamPageProps = {
@@ -9,7 +10,18 @@ type TeamPageProps = {
 
 export default async function TeamPage({ params }: TeamPageProps) {
   const { teamId } = await params;
-  const team = await getTeam(teamId);
-  if (!team) notFound();
+
+  const user = await getCurrentUser();
+
+  if (!user?.id) {
+    redirect("/login");
+  }
+
+  const team = await getTeam(teamId, user.id);
+
+  if (!team) {
+    notFound();
+  }
+
   return <TeamScreen team={team} />;
 }
