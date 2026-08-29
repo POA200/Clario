@@ -63,7 +63,12 @@ export async function getUserTeams(userId: string): Promise<Team[]> {
       id: member.id,
       userId: member.userId,
       name: member.user.name ?? member.user.email,
-      role: member.userId === team.creatorId ? "Owner" : "Member",
+      role:
+      member.userId === team.creatorId
+        ? "Owner"
+        : member.role === "ADMIN"
+          ? "Admin"
+          : "Member",
       status: "offline",
       avatar: member.user.image ?? undefined,
     })),
@@ -112,7 +117,12 @@ export async function getTeam(
       id: member.id,
       userId: member.userId,
       name: member.user.name ?? member.user.email,
-      role: member.userId === team.creatorId ? "Owner" : "Member",
+      role:
+        member.userId === team.creatorId
+          ? "Owner"
+          : member.role === "ADMIN"
+            ? "Admin"
+            : "Member",
       status: "offline",
       avatar: member.user.image ?? undefined,
     })),

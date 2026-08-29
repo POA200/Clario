@@ -80,10 +80,11 @@ export async function POST(request: Request) {
         slug,
         creatorId: user.id,
         members: {
-          create: {
-            userId: user.id,
-          },
+        create: {
+          userId: user.id,
+          role: "ADMIN",
         },
+      },
       },
     });
 

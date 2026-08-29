@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import {
+  Check,
+  Copy,
   Hash,
   Megaphone,
   Palette,
@@ -10,6 +12,7 @@ import {
   Users,
   Code,
   X,
+  UserPlus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -51,6 +54,13 @@ export function TeamScreen({ team }: TeamScreenProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [channelError, setChannelError] = useState("");
 
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const filteredChannels = useMemo(
     () =>
       channels.filter((channel) =>
@@ -83,9 +93,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
     setChannelError("");
   }
 
-  async function handleCreateChannel(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleCreateChannel(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const name = channelName.trim();
@@ -127,7 +135,9 @@ export function TeamScreen({ team }: TeamScreenProps) {
       }
 
       if (!data.channel) {
-        setChannelError("Channel was created, but no channel data was returned.");
+        setChannelError(
+          "Channel was created, but no channel data was returned.",
+        );
         return;
       }
 
@@ -138,10 +148,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
         unread: false,
       };
 
-      setChannels((currentChannels) => [
-        ...currentChannels,
-        newChannel,
-      ]);
+      setChannels((currentChannels) => [...currentChannels, newChannel]);
 
       setShowCreateChannel(false);
       setChannelName("");
@@ -155,10 +162,87 @@ export function TeamScreen({ team }: TeamScreenProps) {
     }
   }
 
+  function openInvite() {
+    setInviteLink("");
+    setInviteError("");
+    setInviteSuccess("");
+    setShowInvite(true);
+  }
+
+  function closeInvite() {
+    setShowInvite(false);
+    setInviteLink("");
+    setInviteError("");
+    setInviteSuccess("");
+  }
+
+  async function handleInvite(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setInviteError("");
+    setInviteSuccess("");
+    setInviteLink("");
+
+    setIsInviting(true);
+
+    try {
+      const response = await fetch(`/api/teams/${team.id}/invites`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setInviteError(
+          typeof data?.error === "string"
+            ? data.error
+            : "Unable to create invite.",
+        );
+        return;
+      }
+
+      if (!data.invite?.url) {
+        setInviteError(
+          "The invite was created, but no invite link was returned.",
+        );
+        return;
+      }
+
+      setInviteLink(data.invite.url);
+      setInviteSuccess(
+        "Invite created successfully. Share the link with them to join the team.",
+      );
+    } catch (error) {
+      console.error("Create invite error:", error);
+      setInviteError("Something went wrong. Please try again.");
+    } finally {
+      setIsInviting(false);
+    }
+  }
+
+  async function copyInviteLink() {
+    if (!inviteLink) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      setInviteError("Unable to copy the invite link.");
+    }
+  }
+
   return (
     <div className="min-h-dvh bg-background">
+      {" "}
       <DesktopSidebar />
-
       <main className="min-h-dvh ml-20 px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6">
         <section className="min-h-[calc(100dvh-24px)] rounded-[20px] bg-dashboard-surface px-4 py-5 md:min-h-[calc(100dvh-60px)] md:rounded-[24px] md:px-6 md:py-7 lg:px-6">
           {/* Team header */}
@@ -195,24 +279,31 @@ export function TeamScreen({ team }: TeamScreenProps) {
               onClick={openCreateChannel}
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-foreground bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary md:h-[58px] md:w-[58px]"
             >
-              <Plus
-                className="size-6 md:size-7"
-                strokeWidth={1.5}
-              />
+              <Plus className="size-6 md:size-7" strokeWidth={1.5} />
             </button>
           </div>
 
-          {/* Members */}
-          <div className="mt-5 flex items-center gap-3 text-foreground md:gap-4">
-            <Users
-              className="size-5 md:size-5"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
+          {/* Members + Invite */}
+          <div className="mt-5 flex flex-wrap items-center gap-3 text-foreground md:gap-4">
+            <Link
+              href={`/teams/${team.id}/members`}
+              className="flex items-center gap-3 rounded-full px-2 py-1 text-foreground transition-colors hover:bg-background/60 focus-visible:outline-2 focus-visible:outline-primary md:gap-4"
+            >
+              <Users className="size-5" strokeWidth={1.8} aria-hidden="true" />
 
-            <span className="text-base md:text-lg">
-              Members: {team.memberCount}
-            </span>
+              <span className="text-base md:text-lg">
+                Members: {team.memberCount}
+              </span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={openInvite}
+              className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <UserPlus className="size-4" strokeWidth={1.8} />
+              <span>Invite</span>
+            </button>
           </div>
 
           {/* Channels */}
@@ -278,11 +369,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
                 onClick={openCreateChannel}
                 className="flex items-center gap-3 text-lg text-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-primary md:text-xl"
               >
-                <Plus
-                  className="size-6"
-                  strokeWidth={1.5}
-                  aria-hidden="true"
-                />
+                <Plus className="size-6" strokeWidth={1.5} aria-hidden="true" />
 
                 <span>Add Channel</span>
               </button>
@@ -290,7 +377,6 @@ export function TeamScreen({ team }: TeamScreenProps) {
           </section>
         </section>
       </main>
-
       {/* Create Channel Modal */}
       {showCreateChannel && (
         <div
@@ -308,7 +394,6 @@ export function TeamScreen({ team }: TeamScreenProps) {
             aria-labelledby="create-channel-title"
             className="w-full max-w-md rounded-2xl bg-background p-6 shadow-2xl"
           >
-            {/* Modal header */}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2
@@ -334,11 +419,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
               </button>
             </div>
 
-            <form
-              onSubmit={handleCreateChannel}
-              className="mt-6 space-y-5"
-            >
-              {/* Channel name */}
+            <form onSubmit={handleCreateChannel} className="mt-6 space-y-5">
               <div>
                 <label
                   htmlFor="channel-name"
@@ -365,7 +446,6 @@ export function TeamScreen({ team }: TeamScreenProps) {
                 </div>
               </div>
 
-              {/* Channel icon */}
               <div>
                 <span className="mb-2 block text-sm font-medium text-foreground">
                   Channel icon
@@ -388,10 +468,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
                             : "border-border bg-background text-foreground hover:bg-muted"
                         } disabled:cursor-not-allowed disabled:opacity-50`}
                       >
-                        <Icon
-                          className="size-5 shrink-0"
-                          strokeWidth={1.8}
-                        />
+                        <Icon className="size-5 shrink-0" strokeWidth={1.8} />
 
                         <span>{option.label}</span>
                       </button>
@@ -400,7 +477,6 @@ export function TeamScreen({ team }: TeamScreenProps) {
                 </div>
               </div>
 
-              {/* Error */}
               {channelError && (
                 <p
                   role="alert"
@@ -410,7 +486,6 @@ export function TeamScreen({ team }: TeamScreenProps) {
                 </p>
               )}
 
-              {/* Actions */}
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -427,6 +502,131 @@ export function TeamScreen({ team }: TeamScreenProps) {
                   className="flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isCreating ? "Creating..." : "Create Channel"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Invite Modal */}
+      {showInvite && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeInvite();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invite-title"
+            className="w-full max-w-md rounded-2xl bg-background p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="invite-title"
+                  className="text-xl font-semibold tracking-tight text-foreground"
+                >
+                  Invite to {team.name}
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Invite someone to join your team.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={closeInvite}
+                disabled={isInviting}
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInvite} className="mt-6 space-y-5">
+              {inviteError && (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {inviteError}
+                </p>
+              )}
+
+              {inviteSuccess && (
+                <div className="rounded-xl bg-primary/10 px-4 py-3">
+                  <div className="flex items-start gap-2">
+                    <Check
+                      className="mt-0.5 size-4 shrink-0 text-primary"
+                      strokeWidth={2}
+                    />
+
+                    <p className="text-sm text-foreground">{inviteSuccess}</p>
+                  </div>
+                </div>
+              )}
+
+              {inviteLink && (
+                <div>
+                  <label
+                    htmlFor="invite-link"
+                    className="mb-2 block text-sm font-medium text-foreground"
+                  >
+                    Invite link
+                  </label>
+
+                  <div className="flex gap-2">
+                    <Input
+                      id="invite-link"
+                      value={inviteLink}
+                      readOnly
+                      className="h-11 min-w-0 rounded-xl border-border bg-muted px-3 text-sm"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={copyInviteLink}
+                      className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="size-4" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-4" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeInvite}
+                  disabled={isInviting}
+                  className="h-11 rounded-xl px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isInviting}
+                  className="flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isInviting ? "Creating..." : "Create Invite"}
                 </button>
               </div>
             </form>
