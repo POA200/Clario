@@ -129,3 +129,72 @@ export async function getTeam(
     channels: team.channels.map(mapChannel),
   };
 }
+
+export type ChannelDetail = {
+  id: string;
+  name: string;
+  icon: string;
+  teamId: string;
+  teamName: string;
+  members: {
+    id: string;
+    name: string;
+    username?: string;
+    image?: string;
+  }[];
+};
+
+export async function getChannel(
+  channelId: string,
+  teamId: string,
+  userId: string,
+): Promise<ChannelDetail | null> {
+  const team = await prisma.team.findFirst({
+    where: {
+      id: teamId,
+      members: {
+        some: {
+          userId,
+        },
+      },
+    },
+    include: {
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              username: true,
+              image: true,
+            },
+          },
+        },
+      },
+      channels: {
+        where: { id: channelId },
+        take: 1,
+      },
+    },
+  });
+
+  if (!team) return null;
+
+  const channel = team.channels[0];
+  if (!channel) return null;
+
+  return {
+    id: channel.id,
+    name: channel.name,
+    icon: channel.icon,
+    teamId: team.id,
+    teamName: team.name,
+    members: team.members.map((member) => ({
+      id: member.user.id,
+      name: member.user.name ?? member.user.email,
+      username: member.user.username ?? undefined,
+      image: member.user.image ?? undefined,
+    })),
+  };
+}

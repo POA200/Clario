@@ -46,29 +46,37 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
+          async authorize(credentials) {
+      if (!credentials?.email || !credentials.password) {
+        return null;
+      }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
-        });
+      const email = credentials.email.toLowerCase().trim();
 
-        if (!user?.password) return null;
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
 
-        const passwordMatches = await bcrypt.compare(
-          credentials.password,
-          user.password,
-        );
+      if (!user?.password) {
+        return null;
+      }
 
-        if (!passwordMatches) return null;
+      const passwordMatches = await bcrypt.compare(
+        credentials.password,
+        user.password,
+      );
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
-      },
+      if (!passwordMatches) {
+        return null;
+      }
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      };
+    },
     }),
   ],
 };

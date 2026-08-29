@@ -24,3 +24,19 @@ export type Team = {
   members: TeamMember[];
   channels: TeamChannel[];
 };
+
+export type MessageType = "NORMAL" | "ANNOUNCEMENT" | "TASK";
+
+export type ChannelMessage = {
+  id: string;
+  content: string;
+  type: MessageType;
+  deadline?: string;
+  createdAt: string;
+  sender: {
+    id: string;
+    name: string;
+    username?: string;
+    image?: string;
+  };
+};

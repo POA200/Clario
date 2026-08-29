@@ -5,20 +5,25 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const databaseUrl = new URL(process.env.DATABASE_URL!);
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not configured");
+}
+
+const url = new URL(databaseUrl);
 
 const adapter = new PrismaPg({
-  host: "13.58.18.166",
+  host: "18.226.241.3",
   port: 5432,
-  database: databaseUrl.pathname.slice(1),
-  user: decodeURIComponent(databaseUrl.username),
-  password: decodeURIComponent(databaseUrl.password),
+  database: url.pathname.slice(1),
+  user: decodeURIComponent(url.username),
+  password: decodeURIComponent(url.password),
 
-  // Neon requires the endpoint ID when connecting by IP.
-  options: "endpoint=ep-old-bonus-axux3gv5",
-
+  // Keep the Neon endpoint name for TLS/SNI.
   ssl: {
     rejectUnauthorized: false,
+    servername: "ep-old-bonus-axux3gv5.c-4.us-east-2.aws.neon.tech",
   },
 
   connectionTimeoutMillis: 10000,
