@@ -198,3 +198,95 @@ export async function getChannel(
     })),
   };
 }
+
+export type TeamInfoMember = {
+  id: string;
+  userId: string;
+  name: string;
+  username?: string;
+  role: string;
+  image?: string;
+  lastSeenAt: string | null;
+};
+
+export type TeamInfoTask = {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: string;
+};
+
+export type TeamInfo = {
+  id: string;
+  name: string;
+  createdAt: string;
+  memberCount: number;
+  members: TeamInfoMember[];
+  tasks: TeamInfoTask[];
+};
+
+export async function getTeamInfo(
+  teamId: string,
+  userId: string,
+): Promise<TeamInfo | null> {
+  const team = await prisma.team.findFirst({
+    where: {
+      id: teamId,
+      members: {
+        some: {
+          userId,
+        },
+      },
+    },
+    include: {
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              username: true,
+              image: true,
+              lastSeenAt: true,
+            },
+          },
+        },
+      },
+      tasks: {
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+    },
+  });
+
+  if (!team) return null;
+
+  return {
+    id: team.id,
+    name: team.name,
+    createdAt: team.createdAt.toISOString(),
+    memberCount: team.members.length,
+    members: team.members.map((member) => ({
+      id: member.id,
+      userId: member.userId,
+      name: member.user.name ?? member.user.email,
+      username: member.user.username ?? undefined,
+      role:
+        member.userId === team.creatorId
+          ? "Owner"
+          : member.role === "ADMIN"
+            ? "Admin"
+            : "Member",
+      image: member.user.image ?? undefined,
+      lastSeenAt: member.user.lastSeenAt?.toISOString() ?? null,
+    })),
+    tasks: team.tasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      completed: task.completed,
+      createdAt: task.createdAt.toISOString(),
+    })),
+  };
+}

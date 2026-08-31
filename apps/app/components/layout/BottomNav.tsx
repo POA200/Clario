@@ -25,9 +25,11 @@ export function BottomNav() {
               href={item.href}
               onClick={(event) => {
                 if (item.href === "/teams") {
-                  event.preventDefault();
                   const teamId = getTeamNavigationId();
-                  if (teamId) router.push(`/teams/${teamId}`);
+                  if (teamId) {
+                    event.preventDefault();
+                    router.push(`/teams/${teamId}`);
+                  }
                 }
               }}
               className={`flex min-w-16 flex-col items-center justify-center gap-1 text-xs transition-colors ${

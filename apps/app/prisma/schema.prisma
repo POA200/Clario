@@ -17,6 +17,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   username      String?   @unique
+  lastSeenAt    DateTime?
 
   accounts      Account[]
   sessions      Session[]
@@ -74,7 +75,8 @@ model Team {
   creator  User         @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   members  TeamMember[]
   channels Channel[]
-  invites TeamInvite[]
+  invites  TeamInvite[]
+  tasks    Task[]
 }
 
 enum TeamMemberRole {
@@ -172,4 +174,17 @@ model Channel {
 
   @@unique([teamId, slug])
   @@index([teamId])
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  teamId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
 }

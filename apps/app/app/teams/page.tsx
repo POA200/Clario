@@ -1,9 +1,20 @@
 import { redirect } from "next/navigation";
 
-import { getDefaultTeamId } from "@/services/team-client";
+import { getCurrentUser } from "@/lib/auth";
+import { getUserTeams } from "@/services/team-service";
 
-export default function TeamsPage() {
-  const teamId = getDefaultTeamId();
-  if (!teamId) redirect("/dashboard");
-  redirect(`/teams/${teamId}`);
+export default async function TeamsPage() {
+  const user = await getCurrentUser();
+
+  if (!user?.id) {
+    redirect("/login");
+  }
+
+  const teams = await getUserTeams(user.id);
+
+  if (teams.length === 0) {
+    redirect("/dashboard");
+  }
+
+  redirect(`/teams/${teams[0].id}`);
 }

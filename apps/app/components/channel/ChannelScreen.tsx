@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ChevronDown,
@@ -81,6 +82,7 @@ type ChannelScreenProps = {
 };
 
 export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -345,7 +347,8 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
 
             <button
               type="button"
-              aria-label="Channel options"
+              aria-label="Team info"
+              onClick={() => router.push(`/teams/${channel.teamId}/info`)}
               className="flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted"
             >
               <MoreVertical className="size-5" strokeWidth={2} />

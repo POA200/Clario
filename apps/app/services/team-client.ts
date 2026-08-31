@@ -1,4 +1,4 @@
-import { MOCK_TEAMS, TEAM_STORAGE_KEY } from "@/data/teams";
+const TEAM_STORAGE_KEY = "clario:last-opened-team";
 
 export function getLastOpenedTeamId(): string | null {
   if (typeof window === "undefined") return null;
@@ -12,14 +12,6 @@ export function rememberTeam(teamId: string): void {
   window.localStorage.setItem(TEAM_STORAGE_KEY, teamId);
 }
 
-export function getDefaultTeamId(): string | null {
-  return MOCK_TEAMS[0]?.id ?? null;
-}
-
 export function getTeamNavigationId(): string | null {
-  const lastOpenedTeamId = getLastOpenedTeamId();
-
-  return MOCK_TEAMS.some((team) => team.id === lastOpenedTeamId)
-    ? lastOpenedTeamId
-    : getDefaultTeamId();
+  return getLastOpenedTeamId();
 }

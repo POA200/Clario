@@ -14,16 +14,14 @@ if (!databaseUrl) {
 const url = new URL(databaseUrl);
 
 const adapter = new PrismaPg({
-  host: "18.226.241.3",
-  port: 5432,
+  host: url.hostname,
+  port: Number(url.port) || 5432,
   database: url.pathname.slice(1),
   user: decodeURIComponent(url.username),
   password: decodeURIComponent(url.password),
 
-  // Keep the Neon endpoint name for TLS/SNI.
   ssl: {
     rejectUnauthorized: false,
-    servername: "ep-old-bonus-axux3gv5.c-4.us-east-2.aws.neon.tech",
   },
 
   connectionTimeoutMillis: 10000,

@@ -35,9 +35,12 @@ export function DesktopSidebar() {
     href: string,
   ) {
     if (href === "/teams") {
-      event.preventDefault();
       const teamId = getTeamNavigationId();
-      if (teamId) router.push(`/teams/${teamId}`);
+      if (teamId) {
+        event.preventDefault();
+        router.push(`/teams/${teamId}`);
+      }
+      // If no teamId, let the link navigate to /teams (server-side fallback)
     }
   }
 
