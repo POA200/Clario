@@ -12,8 +12,8 @@ const logos: Logo[] = [
     alt: "React Native",
   },
   {
-    src: "/logos/supabase-logo.svg",
-    alt: "Supabase",
+    src: "/logos/neon-tech.svg",
+    alt: "Neon",
   },
   {
     src: "/logos/postgrsql-logo.svg",
@@ -24,8 +24,8 @@ const logos: Logo[] = [
     alt: "Figma",
   },
   {
-    src: "/logos/expo-logo.svg",
-    alt: "Expo",
+    src: "/logos/prisma.svg",
+    alt: "Prisma",
   },
 ];
 

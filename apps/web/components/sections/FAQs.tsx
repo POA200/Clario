@@ -9,8 +9,8 @@ import {
 const faqs = [
   {
     value: "availability",
-    question: "Is Clario available on Android and iOS?",
-    answer: "Yes. Built with React Native for cross-platform compatibility.",
+    question: "Is Clario available on Android?",
+    answer: "Yes. Built with React.",
   },
   {
     value: "teams",

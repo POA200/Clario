@@ -2,6 +2,7 @@ import { ArrowUpRight } from "lucide-react";
 
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/ui/button";
+import { clarioAppUrl } from "@/lib/navigation";
 
 export function FinalCTA() {
   return (
@@ -21,7 +22,8 @@ export function FinalCTA() {
             <div className="pt-4 sm:pt-6">
               <Button
                 size="lg"
-                className="w-full rounded-xl bg-white px-8 py-6 text-lg font-semibold text-foreground shadow-sm hover:bg-white/95 sm:w-auto sm:min-w-56"
+                className="w-full rounded-xl bg-white px-8 py-6 text-lg font-semibold text-foreground shadow-sm hover:bg-white/95 sm:w-auto sm:min-w-56 cursor-pointer"
+                render={<a href={clarioAppUrl} />}
               >
                 Get Started
                 <ArrowUpRight className="size-5" />
