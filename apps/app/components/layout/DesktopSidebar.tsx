@@ -17,7 +17,7 @@ function LogoMark() {
     >
       <Image
         src="/Clario_logomark.svg"
-        alt=""
+        alt="Clario"
         width={178}
         height={58}
         priority

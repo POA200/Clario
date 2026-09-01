@@ -34,7 +34,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
       {
-        src: "/Clario_logomark.svg",
+        src: "/clario-app-logo.svg",
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",

@@ -11,6 +11,7 @@ const PAGES_CACHE_NAME = `clario-pages-${CACHE_VERSION}`;
 // Core static assets to precache on install
 const PRECACHE_ASSETS = [
   "/offline",
+  "/clario-app-logo.svg",
   "/Clario_logomark.svg",
   "/clario_logo.svg",
   "/icons/icon-192x192.png",

@@ -158,7 +158,9 @@ export function InstallPrompt() {
             <Share className="h-4 w-4 shrink-0 text-primary" />
             <span>
               Tap <strong className="font-semibold">Share</strong> then select{" "}
-              <strong className="font-semibold">&quot;Add to Home Screen&quot;</strong>
+              <strong className="font-semibold">
+                &quot;Add to Home Screen&quot;
+              </strong>
             </span>
           </div>
         ) : (
