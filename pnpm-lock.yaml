@@ -50,6 +50,9 @@ importers:
       next-auth:
         specifier: ^4.24.15
         version: 4.24.15(next@16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       pg:
         specifier: ^8.23.0
         version: 8.23.0
@@ -10003,7 +10006,7 @@ snapshots:
       '@next/eslint-plugin-next': 16.3.0(eslint@9.39.1(jiti@2.7.0))
       eslint: 9.39.1(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.1(jiti@2.7.0))
       eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1(jiti@2.7.0))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.39.1(jiti@2.7.0))
       eslint-plugin-react: 7.37.5(eslint@9.39.1(jiti@2.7.0))
@@ -10030,7 +10033,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.1(jiti@2.7.0)):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3
@@ -10045,13 +10048,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0)):
+  eslint-module-utils@2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1(jiti@2.7.0)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       eslint: 9.39.1(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.1(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 
@@ -10066,7 +10069,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.1(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-module-utils: 2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0)))(eslint@9.39.1(jiti@2.7.0))
+      eslint-module-utils: 2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1(jiti@2.7.0))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -11603,7 +11606,7 @@ snapshots:
       next: 16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       oauth: 0.9.15
       openid-client: 5.7.1
-      preact: 10.29.8(preact-render-to-string@5.2.6(preact@10.24.3))
+      preact: 10.29.8(preact-render-to-string@5.2.6)
       preact-render-to-string: 5.2.6(preact@10.29.8)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
@@ -11613,6 +11616,11 @@ snapshots:
     dependencies:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
+
+  next-themes@0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+    dependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
 
   next@16.2.0(@babel/core@7.29.7)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
@@ -12019,7 +12027,7 @@ snapshots:
 
   preact-render-to-string@5.2.6(preact@10.29.8):
     dependencies:
-      preact: 10.29.8(preact-render-to-string@5.2.6(preact@10.24.3))
+      preact: 10.29.8(preact-render-to-string@5.2.6)
       pretty-format: 3.8.0
 
   preact-render-to-string@6.5.11(preact@10.24.3):
@@ -12028,7 +12036,7 @@ snapshots:
 
   preact@10.24.3: {}
 
-  preact@10.29.8(preact-render-to-string@5.2.6(preact@10.24.3)):
+  preact@10.29.8(preact-render-to-string@5.2.6):
     optionalDependencies:
       preact-render-to-string: 5.2.6(preact@10.29.8)
 

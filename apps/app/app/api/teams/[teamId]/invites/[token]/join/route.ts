@@ -73,6 +73,29 @@ export async function POST(
       },
     });
 
+    // Notify other team members
+    const otherMembers = await prisma.teamMember.findMany({
+      where: {
+        teamId: invite.teamId,
+        userId: { not: session.user.id },
+      },
+      select: { userId: true },
+    });
+
+    if (otherMembers.length > 0) {
+      await prisma.notification.createMany({
+        data: otherMembers.map((m) => ({
+          userId: m.userId,
+          title: `New Team Member`,
+          message: `${session.user.name || "A new member"} joined ${invite.team.name}.`,
+          type: "MEMBER_JOINED",
+          link: `/teams/${invite.teamId}/members`,
+        })),
+      }).catch((err) => {
+        console.error("Failed to create join notifications:", err);
+      });
+    }
+
     return NextResponse.json({
       joined: true,
       alreadyMember: false,

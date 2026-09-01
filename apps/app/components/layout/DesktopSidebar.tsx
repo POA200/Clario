@@ -5,6 +5,7 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { useEffect, useState } from "react";
 import { DASHBOARD_NAVIGATION } from "@/data/navigation";
 import { getTeamNavigationId } from "@/services/team-client";
 
@@ -29,6 +30,30 @@ function LogoMark() {
 export function DesktopSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    function fetchUnread() {
+      fetch("/api/notifications")
+        .then((res) => res.json())
+        .then((data) => {
+          if (isMounted && typeof data?.unreadCount === "number") {
+            setUnreadCount(data.unreadCount);
+          }
+        })
+        .catch(() => {
+          // Silently ignore
+        });
+    }
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60_000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   function handleNavigation(
     event: React.MouseEvent<HTMLAnchorElement>,
@@ -40,9 +65,11 @@ export function DesktopSidebar() {
         event.preventDefault();
         router.push(`/teams/${teamId}`);
       }
-      // If no teamId, let the link navigate to /teams (server-side fallback)
     }
   }
+
+  const isProfileActive =
+    pathname.startsWith("/profile") || pathname.startsWith("/settings");
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 flex w-20 flex-col items-center py-5 md:w-[128px] md:py-8 lg:w-[128px]">
@@ -58,23 +85,38 @@ export function DesktopSidebar() {
               : pathname === href ||
                 (href !== "/" && pathname.startsWith(`${href}/`));
 
+          const isNotification = href === "/notifications";
+
           return (
             <Link
               key={label}
               href={href}
               aria-label={label}
               onClick={(event) => handleNavigation(event, href)}
-              className={`flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+              className={`relative flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-primary/10 text-primary hover:bg-primary/20"
+              }`}
             >
               <Icon className="size-6 md:size-8" strokeWidth={2.5} />
+              {isNotification && unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
       <Link
-        href="/settings"
-        aria-label="Profile settings"
-        className="mt-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-primary text-primary-foreground focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px]"
+        href="/profile"
+        aria-label="My profile"
+        className={`mt-auto flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${
+          isProfileActive
+            ? "bg-primary text-primary-foreground"
+            : "bg-primary text-primary-foreground hover:opacity-90"
+        }`}
       >
         <UserRound className="size-6 md:size-8" strokeWidth={2.5} />
       </Link>

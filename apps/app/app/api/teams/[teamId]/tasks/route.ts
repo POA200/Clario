@@ -84,6 +84,34 @@ export async function POST(
       }
     });
 
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { name: true },
+    });
+
+    // Notify other team members asynchronously
+    const members = await prisma.teamMember.findMany({
+      where: {
+        teamId,
+        userId: { not: session.user.id },
+      },
+      select: { userId: true },
+    });
+
+    if (members.length > 0) {
+      await prisma.notification.createMany({
+        data: members.map((m) => ({
+          userId: m.userId,
+          title: `New Task in ${team?.name || "Team"}`,
+          message: `"${title}" was added.`,
+          type: "TASK_CREATED",
+          link: `/teams/${teamId}`,
+        })),
+      }).catch((err) => {
+        console.error("Failed to create task notifications:", err);
+      });
+    }
+
     return NextResponse.json({
       task: {
         id: task.id,
