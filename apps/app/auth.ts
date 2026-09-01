@@ -46,37 +46,49 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-          async authorize(credentials) {
-      if (!credentials?.email || !credentials.password) {
-        return null;
-      }
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
+          console.error("[Auth] Missing credentials");
+          return null;
+        }
 
-      const email = credentials.email.toLowerCase().trim();
+        const email = credentials.email.toLowerCase().trim();
+        console.log("[Auth] Attempting login for email:", email);
 
-      const user = await prisma.user.findUnique({
-        where: { email },
-      });
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
 
-      if (!user?.password) {
-        return null;
-      }
+        if (!user) {
+          console.error("[Auth] User not found:", email);
+          return null;
+        }
 
-      const passwordMatches = await bcrypt.compare(
-        credentials.password,
-        user.password,
-      );
+        if (!user?.password) {
+          console.error("[Auth] User has no password set:", email);
+          return null;
+        }
 
-      if (!passwordMatches) {
-        return null;
-      }
+        const passwordMatches = await bcrypt.compare(
+          credentials.password,
+          user.password,
+        );
 
-      return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-      };
-    },
+        console.log("[Auth] Password match result:", passwordMatches);
+
+        if (!passwordMatches) {
+          console.error("[Auth] Password mismatch for:", email);
+          return null;
+        }
+
+        console.log("[Auth] Login successful for:", email);
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        };
+      },
     }),
   ],
 };

@@ -21,10 +21,13 @@ const adapter = new PrismaPg({
   password: decodeURIComponent(url.password),
 
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: true,
+    servername: url.hostname, // Proper SNI for TLS
   },
 
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 15000,
+  idleTimeoutMillis: 30000,
+  max: 20, // Connection pool size
 });
 
 export const prisma =
