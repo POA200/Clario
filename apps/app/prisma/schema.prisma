@@ -28,6 +28,7 @@ model User {
   messages      Message[]
   notifications Notification[]
   preference    UserPreference?
+  channelReads  ChannelRead[]
 }
 
 model Account {
@@ -171,11 +172,25 @@ model Channel {
   updatedAt DateTime @updatedAt
   teamId    String
 
-  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  messages Message[]
+  team         Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  messages     Message[]
+  channelReads ChannelRead[]
 
   @@unique([teamId, slug])
   @@index([teamId])
+}
+
+model ChannelRead {
+  id         String   @id @default(cuid())
+  channelId  String
+  userId     String
+  lastReadAt DateTime @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@index([userId])
 }
 
 model Task {

@@ -104,6 +104,16 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const markAsRead = useCallback(async () => {
+    try {
+      await fetch(`/api/teams/${channel.teamId}/channels/${channel.id}/read`, {
+        method: "POST",
+      });
+    } catch {
+      // Silently ignore
+    }
+  }, [channel.teamId, channel.id]);
+
   // Fetch messages
   const fetchMessages = useCallback(
     async (search?: string) => {
@@ -130,13 +140,14 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
 
         setMessages(data.messages ?? []);
         setError("");
+        markAsRead();
       } catch {
         setError("Unable to load messages. Please try again.");
       } finally {
         setIsLoading(false);
       }
     },
-    [channel.teamId, channel.id],
+    [channel.teamId, channel.id, markAsRead],
   );
 
   useEffect(() => {

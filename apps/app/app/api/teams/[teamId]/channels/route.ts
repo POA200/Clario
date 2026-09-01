@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getTeamChannels } from "@/services/team-service";
 
 const VALID_ICONS = [
   "messages",
@@ -17,6 +18,47 @@ function createSlug(name: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ teamId: string }> },
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { teamId } = await params;
+
+    const membership = await prisma.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: session.user.id,
+          teamId,
+        },
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json(
+        { error: "You are not a member of this team" },
+        { status: 403 },
+      );
+    }
+
+    const channels = await getTeamChannels(teamId, session.user.id);
+
+    return NextResponse.json({ channels });
+  } catch (error) {
+    console.error("Fetch channels error:", error);
+    return NextResponse.json(
+      { error: "Unable to fetch channels" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(

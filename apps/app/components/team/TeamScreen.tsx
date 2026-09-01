@@ -77,6 +77,38 @@ export function TeamScreen({ team }: TeamScreenProps) {
     setChannels(team.channels);
   }, [team.channels]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function refreshChannels() {
+      try {
+        const response = await fetch(`/api/teams/${team.id}/channels`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (isMounted && Array.isArray(data?.channels)) {
+          setChannels(data.channels);
+        }
+      } catch {
+        // Silently ignore
+      }
+    }
+
+    refreshChannels();
+
+    const interval = window.setInterval(refreshChannels, 5000);
+    const handleFocus = () => {
+      refreshChannels();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [team.id]);
+
   function openCreateChannel() {
     setChannelName("");
     setChannelIcon("messages");
@@ -326,10 +358,16 @@ export function TeamScreen({ team }: TeamScreenProps) {
                   <Link
                     key={channel.id}
                     href={`/teams/${team.id}/channels/${channel.id}`}
-                    className="flex min-w-0 items-center gap-4 rounded-lg py-1 text-foreground transition-colors hover:bg-background/50 focus-visible:outline-2 focus-visible:outline-primary md:gap-5"
+                    className={`flex min-w-0 items-center gap-4 rounded-lg py-1 transition-colors hover:bg-background/50 focus-visible:outline-2 focus-visible:outline-primary md:gap-5 ${
+                      channel.unread
+                        ? "text-black font-semibold"
+                        : "text-foreground"
+                    }`}
                   >
                     <ChannelIcon
-                      className="size-5 shrink-0 text-muted-foreground md:size-5"
+                      className={`size-5 shrink-0 md:size-5 ${
+                        channel.unread ? "text-black" : "text-muted-foreground"
+                      }`}
                       strokeWidth={1.8}
                       aria-hidden="true"
                     />
@@ -339,13 +377,19 @@ export function TeamScreen({ team }: TeamScreenProps) {
                       aria-hidden="true"
                     />
 
-                    <span className="min-w-0 truncate text-lg md:text-xl">
+                    <span
+                      className={`min-w-0 truncate text-lg md:text-xl ${
+                        channel.unread
+                          ? "text-black font-semibold"
+                          : "text-foreground"
+                      }`}
+                    >
                       {channel.name}
                     </span>
 
                     {channel.unread && (
                       <span
-                        className="ml-auto size-3 shrink-0 rounded-full bg-foreground"
+                        className="ml-auto size-2.5 shrink-0 rounded-full bg-black"
                         aria-label="Unread messages"
                       />
                     )}

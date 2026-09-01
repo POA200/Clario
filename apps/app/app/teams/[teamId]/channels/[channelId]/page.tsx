@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ChannelScreen } from "@/components/channel/ChannelScreen";
 import { getCurrentUser } from "@/lib/auth";
-import { getChannel } from "@/services/team-service";
+import { getChannel, markChannelAsRead } from "@/services/team-service";
 
 type ChannelPageProps = {
   params: Promise<{ teamId: string; channelId: string }>;
@@ -23,10 +23,16 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
     notFound();
   }
 
+  await markChannelAsRead(channelId, user.id);
+
   return (
     <ChannelScreen
       channel={channel}
-      currentUser={{ id: user.id, name: user.name ?? undefined, image: user.image ?? undefined }}
+      currentUser={{
+        id: user.id,
+        name: user.name ?? undefined,
+        image: user.image ?? undefined,
+      }}
     />
   );
 }

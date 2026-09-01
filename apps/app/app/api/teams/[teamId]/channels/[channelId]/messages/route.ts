@@ -170,6 +170,23 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
     });
 
+    await prisma.channelRead.upsert({
+      where: {
+        channelId_userId: {
+          channelId,
+          userId: session.user.id,
+        },
+      },
+      update: {
+        lastReadAt: message.createdAt,
+      },
+      create: {
+        channelId,
+        userId: session.user.id,
+        lastReadAt: message.createdAt,
+      },
+    });
+
     return NextResponse.json(
       {
         message: {

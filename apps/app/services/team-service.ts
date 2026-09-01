@@ -10,22 +10,42 @@ const VALID_CHANNEL_ICONS = [
   "development",
 ] as const;
 
-function mapChannel(channel: {
-  id: string;
-  name: string;
-  icon: string;
-}): TeamChannel {
+function mapChannel(
+  channel: {
+    id: string;
+    name: string;
+    icon: string;
+    channelReads?: { lastReadAt: Date }[];
+    messages?: { id: string; senderId: string; createdAt: Date }[];
+  },
+  userId?: string,
+): TeamChannel {
   const icon = VALID_CHANNEL_ICONS.includes(
     channel.icon as (typeof VALID_CHANNEL_ICONS)[number],
   )
     ? (channel.icon as TeamChannel["icon"])
     : "messages";
 
+  let unread = false;
+  if (channel.messages && channel.messages.length > 0) {
+    const latestMessage = channel.messages[0];
+    const lastReadAt = channel.channelReads?.[0]?.lastReadAt;
+
+    if (lastReadAt) {
+      unread =
+        new Date(latestMessage.createdAt).getTime() >
+          new Date(lastReadAt).getTime() &&
+        latestMessage.senderId !== userId;
+    } else {
+      unread = latestMessage.senderId !== userId;
+    }
+  }
+
   return {
     id: channel.id,
     name: channel.name,
     icon,
-    unread: false,
+    unread,
   };
 }
 
@@ -49,6 +69,22 @@ export async function getUserTeams(userId: string): Promise<Team[]> {
           orderBy: {
             createdAt: "asc",
           },
+          include: {
+            channelReads: {
+              where: { userId },
+              take: 1,
+            },
+            messages: {
+              where: { deletedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                senderId: true,
+                createdAt: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
@@ -65,15 +101,15 @@ export async function getUserTeams(userId: string): Promise<Team[]> {
         userId: member.userId,
         name: member.user.name ?? member.user.email,
         role:
-        member.userId === team.creatorId
-          ? "Owner"
-          : member.role === "ADMIN"
-            ? "Admin"
-            : "Member",
+          member.userId === team.creatorId
+            ? "Owner"
+            : member.role === "ADMIN"
+              ? "Admin"
+              : "Member",
         status: "offline",
         avatar: member.user.image ?? undefined,
       })),
-      channels: team.channels.map(mapChannel),
+      channels: team.channels.map((channel) => mapChannel(channel, userId)),
     }));
   } catch (error) {
     console.error("[Team Service] Error fetching teams:", error);
@@ -108,6 +144,22 @@ export async function getTeam(
         orderBy: {
           createdAt: "asc",
         },
+        include: {
+          channelReads: {
+            where: { userId },
+            take: 1,
+          },
+          messages: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              senderId: true,
+              createdAt: true,
+            },
+          },
+        },
       },
     },
   });
@@ -131,8 +183,68 @@ export async function getTeam(
       status: "offline",
       avatar: member.user.image ?? undefined,
     })),
-    channels: team.channels.map(mapChannel),
+    channels: team.channels.map((channel) => mapChannel(channel, userId)),
   };
+}
+
+export async function getTeamChannels(
+  teamId: string,
+  userId: string,
+): Promise<TeamChannel[]> {
+  try {
+    const channels = await prisma.channel.findMany({
+      where: { teamId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        channelReads: {
+          where: { userId },
+          take: 1,
+        },
+        messages: {
+          where: { deletedAt: null },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            senderId: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return channels.map((channel) => mapChannel(channel, userId));
+  } catch (error) {
+    console.error("[Team Service] Error fetching team channels:", error);
+    return [];
+  }
+}
+
+export async function markChannelAsRead(
+  channelId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    const now = new Date();
+    await prisma.channelRead.upsert({
+      where: {
+        channelId_userId: {
+          channelId,
+          userId,
+        },
+      },
+      update: {
+        lastReadAt: now,
+      },
+      create: {
+        channelId,
+        userId,
+        lastReadAt: now,
+      },
+    });
+  } catch (error) {
+    console.error("[Team Service] Error marking channel as read:", error);
+  }
 }
 
 export type ChannelDetail = {
