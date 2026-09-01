@@ -21,19 +21,24 @@ export function LoginForm() {
     setError("");
     setIsSubmitting(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      setError("Invalid email or password.");
+      if (result?.error) {
+        setError("Invalid email or password.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      window.location.href = "/dashboard";
+    } catch {
+      setError("An unexpected error occurred during login. Please try again.");
       setIsSubmitting(false);
-      return;
     }
-
-    router.push("/dashboard");
   }
 
   return (
