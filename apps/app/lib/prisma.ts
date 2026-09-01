@@ -5,29 +5,12 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not configured");
-}
-
-const url = new URL(databaseUrl);
-
 const adapter = new PrismaPg({
-  host: url.hostname,
-  port: Number(url.port) || 5432,
-  database: url.pathname.slice(1),
-  user: decodeURIComponent(url.username),
-  password: decodeURIComponent(url.password),
-
-  ssl: {
-    rejectUnauthorized: true,
-    servername: url.hostname, // Proper SNI for TLS
-  },
-
-  connectionTimeoutMillis: 15000,
-  idleTimeoutMillis: 30000,
-  max: 20, // Connection pool size
+  connectionString: process.env.DATABASE_URL,
+  connectTimeoutMillis: 60000,
+  idleTimeoutMillis: 90000,
+  query_timeout: 60000,
+  max: 10,
 });
 
 export const prisma =

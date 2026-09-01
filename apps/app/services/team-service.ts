@@ -30,50 +30,55 @@ function mapChannel(channel: {
 }
 
 export async function getUserTeams(userId: string): Promise<Team[]> {
-  const teams = await prisma.team.findMany({
-    where: {
-      members: {
-        some: {
-          userId,
+  try {
+    const teams = await prisma.team.findMany({
+      where: {
+        members: {
+          some: {
+            userId,
+          },
         },
       },
-    },
-    include: {
-      members: {
-        include: {
-          user: true,
+      include: {
+        members: {
+          include: {
+            user: true,
+          },
+        },
+        channels: {
+          orderBy: {
+            createdAt: "asc",
+          },
         },
       },
-      channels: {
-        orderBy: {
-          createdAt: "asc",
-        },
+      orderBy: {
+        createdAt: "asc",
       },
-    },
-    orderBy: {
-      createdAt: "asc",
-    },
-  });
+    });
 
-  return teams.map((team) => ({
-    id: team.id,
-    name: team.name,
-    memberCount: team.members.length,
-    members: team.members.map((member) => ({
-      id: member.id,
-      userId: member.userId,
-      name: member.user.name ?? member.user.email,
-      role:
-      member.userId === team.creatorId
-        ? "Owner"
-        : member.role === "ADMIN"
-          ? "Admin"
-          : "Member",
-      status: "offline",
-      avatar: member.user.image ?? undefined,
-    })),
-    channels: team.channels.map(mapChannel),
-  }));
+    return teams.map((team) => ({
+      id: team.id,
+      name: team.name,
+      memberCount: team.members.length,
+      members: team.members.map((member) => ({
+        id: member.id,
+        userId: member.userId,
+        name: member.user.name ?? member.user.email,
+        role:
+        member.userId === team.creatorId
+          ? "Owner"
+          : member.role === "ADMIN"
+            ? "Admin"
+            : "Member",
+        status: "offline",
+        avatar: member.user.image ?? undefined,
+      })),
+      channels: team.channels.map(mapChannel),
+    }));
+  } catch (error) {
+    console.error("[Team Service] Error fetching teams:", error);
+    return [];
+  }
 }
 
 export async function getTeam(

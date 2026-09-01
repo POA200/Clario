@@ -458,7 +458,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             <button
               type="button"
               onClick={() => setShowTypeMenu(!showTypeMenu)}
-              className="flex h-11 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="flex h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               {MESSAGE_TYPE_OPTIONS.find((o) => o.value === messageType)
                 ?.label ?? "Normal"}
@@ -511,14 +511,14 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             placeholder="write message...."
             disabled={isSending}
             maxLength={4000}
-            className="h-11 min-w-0 flex-1 rounded-lg border-border bg-background px-4 text-sm placeholder:text-muted-foreground"
+            className="h-11 min-w-0 flex-1 rounded-full border-border bg-background px-4 text-sm placeholder:text-muted-foreground"
           />
 
           {/* Send button */}
           <button
             type="submit"
             disabled={isSending || !content.trim()}
-            className="flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 items-center gap-2 bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 rounded-full"
           >
             Send
             <Send className="size-4" strokeWidth={2} />
