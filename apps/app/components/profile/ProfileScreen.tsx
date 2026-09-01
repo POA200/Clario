@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Camera,
   Check,
+  Loader2,
   Pencil,
   Settings,
   SquarePen,
   UserRound,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import type { UserProfile } from "@/services/user-service";
@@ -32,7 +34,8 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
   );
   const [password, setPassword] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(initialProfile.image || "");
-  const [showAvatarInput, setShowAvatarInput] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -42,6 +45,72 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
   const displayUsername = profile.username
     ? `@${profile.username}`
     : "@iPeter_crx";
+
+  const handleImageFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file (PNG, JPEG, WebP, GIF).");
+      return;
+    }
+
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_SIZE) {
+      setError(
+        "Image size exceeds the 2MB limit. Please choose a smaller photo.",
+      );
+      return;
+    }
+
+    setError("");
+    setIsUploading(true);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) {
+        setIsUploading(false);
+        return;
+      }
+
+      setAvatarUrl(dataUrl);
+      setProfile((prev) => ({ ...prev, image: dataUrl }));
+
+      try {
+        const response = await fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: dataUrl }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data?.error || "Failed to update profile picture.");
+          return;
+        }
+
+        if (data.user) {
+          setProfile(data.user);
+          setSuccessMessage("Profile picture updated successfully!");
+        }
+      } catch {
+        setError("Network error uploading profile picture.");
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
+    reader.onerror = () => {
+      setError("Failed to read image file.");
+      setIsUploading(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -134,7 +203,19 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
         {/* Avatar Section */}
         <div className="mt-8 flex flex-col items-center text-center">
           <div className="relative">
-            <div className="flex size-32 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-muted md:size-36">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageFileSelect}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              aria-label="Upload profile picture"
+            />
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative flex size-32 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border bg-muted transition-opacity hover:opacity-90 md:size-36"
+            >
               {profile.image ? (
                 <img
                   src={profile.image}
@@ -142,8 +223,14 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
                   className="size-full object-cover"
                 />
               ) : (
-                <div className="flex size-full items-center justify-center bg-[#E5E7EB] text-4xl font-bold text-[#4B5563]">
+                <div className="flex size-full items-center justify-center bg-muted text-4xl font-bold text-muted-foreground">
                   <UserRound className="size-16 text-muted-foreground" />
+                </div>
+              )}
+
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white backdrop-blur-xs">
+                  <Loader2 className="size-8 animate-spin" />
                 </div>
               )}
             </div>
@@ -151,35 +238,14 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
             {/* Edit Avatar Badge */}
             <button
               type="button"
-              aria-label="Change avatar"
-              onClick={() => setShowAvatarInput(!showAvatarInput)}
-              className="absolute bottom-1 right-1 flex size-8 items-center justify-center rounded-full bg-black text-white shadow-md transition-transform hover:scale-105"
+              aria-label="Upload profile picture"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="absolute bottom-1 right-1 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
             >
-              <SquarePen className="size-4" strokeWidth={2} />
+              <Camera className="size-4" strokeWidth={2.2} />
             </button>
           </div>
-
-          {/* Quick Avatar URL input */}
-          {showAvatarInput && (
-            <div className="mt-3 flex w-full max-w-xs items-center gap-2">
-              <Input
-                placeholder="Avatar image URL"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                className="h-9 text-xs"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setProfile((prev) => ({ ...prev, image: avatarUrl }));
-                  setShowAvatarInput(false);
-                }}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
-              >
-                Apply
-              </button>
-            </div>
-          )}
 
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground md:text-[26px]">
             {displayName}
@@ -212,7 +278,7 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
         {/* View Mode or Edit Mode */}
         {!isEditing ? (
           /* View Mode Card (media_1788279592998.png) */
-          <div className="mt-8 rounded-[28px] border border-[#D5CAFE]/60 bg-[#EAE6FE] p-6">
+          <div className="mt-8 rounded-[28px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between text-base">
                 <span className="font-semibold text-foreground">Name:</span>

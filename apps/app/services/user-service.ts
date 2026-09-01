@@ -162,3 +162,24 @@ export async function updateUserProfile(
   }
 }
 
+export async function deleteUserAccount(userId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found." };
+    }
+
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("[User Service] Error deleting account:", error);
+    return { success: false, error: "Failed to delete account. Please try again." };
+  }
+}
+

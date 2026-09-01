@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
@@ -9,6 +11,7 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -92,8 +95,13 @@ export function TeamInfoScreen({
   teamInfo,
   currentUserId,
 }: TeamInfoScreenProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("tasks");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [showDeleteTeamModal, setShowDeleteTeamModal] = useState(false);
+  const [isDeletingTeam, setIsDeletingTeam] = useState(false);
+  const [deleteTeamError, setDeleteTeamError] = useState("");
 
   // Tasks state
   const [tasks, setTasks] = useState<TeamInfoTask[]>(teamInfo.tasks);
@@ -167,6 +175,40 @@ export function TeamInfoScreen({
     [teamInfo.id],
   );
 
+  const [taskToDelete, setTaskToDelete] = useState<{
+    taskId: string;
+    title: string;
+  } | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+
+  const confirmDeleteTask = useCallback(async () => {
+    if (!taskToDelete) return;
+    const { taskId } = taskToDelete;
+    setIsDeletingTask(true);
+
+    // Optimistic update
+    setTasks((current) => current.filter((t) => t.id !== taskId));
+    setTaskToDelete(null);
+
+    try {
+      await fetch(`/api/teams/${teamInfo.id}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+    } catch {
+      // Silently ignore or reload on failure
+    } finally {
+      setIsDeletingTask(false);
+    }
+  }, [taskToDelete, teamInfo.id]);
+
+  const deleteTask = useCallback(
+    (task: { id: string; title: string }, event: React.MouseEvent) => {
+      event.stopPropagation();
+      setTaskToDelete({ taskId: task.id, title: task.title });
+    },
+    [],
+  );
+
   async function handleCreateTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -204,6 +246,30 @@ export function TeamInfoScreen({
       setTaskError("Something went wrong. Please try again.");
     } finally {
       setIsCreatingTask(false);
+    }
+  }
+
+  async function handleDeleteTeam() {
+    setIsDeletingTeam(true);
+    setDeleteTeamError("");
+
+    try {
+      const response = await fetch(`/api/teams/${teamInfo.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDeleteTeamError(data?.error || "Failed to delete team.");
+        setIsDeletingTeam(false);
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch {
+      setDeleteTeamError("Network error deleting team.");
+      setIsDeletingTeam(false);
     }
   }
 
@@ -319,6 +385,7 @@ export function TeamInfoScreen({
             <TasksTab
               tasks={filteredTasks}
               onToggle={toggleTask}
+              onDelete={deleteTask}
               searchQuery={searchQuery}
               newTaskTitle={newTaskTitle}
               setNewTaskTitle={setNewTaskTitle}
@@ -332,8 +399,150 @@ export function TeamInfoScreen({
           {activeTab === "members" && (
             <MembersTab members={filteredMembers} searchQuery={searchQuery} />
           )}
+
+          {/* Danger Zone: Delete Team (Admins Only) */}
+          {teamInfo.isAdmin && (
+            <div className="mt-12 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-destructive">
+                    Delete Team
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Permanently remove this team, its channels, tasks, and
+                    messages.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteTeamModal(true);
+                    setDeleteTeamError("");
+                  }}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground transition-opacity hover:opacity-90"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>Delete Team</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Delete Team Confirmation Modal */}
+      {showDeleteTeamModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isDeletingTeam) {
+              setShowDeleteTeamModal(false);
+              setDeleteTeamError("");
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-destructive">
+              <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">
+                  Delete Team
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  This will delete &quot;{teamInfo.name}&quot; and all
+                  associated data.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-foreground/80">
+              Are you sure you want to delete this team? All channels, tasks,
+              invites, and chat messages will be permanently deleted for all
+              members.
+            </p>
+
+            {deleteTeamError && (
+              <div
+                role="alert"
+                className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive"
+              >
+                {deleteTeamError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingTeam}
+                onClick={() => setShowDeleteTeamModal(false)}
+                className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingTeam}
+                onClick={handleDeleteTeam}
+                className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
+                <span>{isDeletingTeam ? "Deleting..." : "Delete Team"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Task Confirmation Modal */}
+      {taskToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isDeletingTask) {
+              setTaskToDelete(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl space-y-3.5">
+            <div className="flex items-center gap-2.5 text-destructive">
+              <div className="flex size-9 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="size-4.5" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">
+                Delete Task?
+              </h2>
+            </div>
+
+            <p className="text-xs text-foreground/80 line-clamp-2">
+              Are you sure you want to delete &quot;{taskToDelete.title}&quot;?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isDeletingTask}
+                onClick={() => setTaskToDelete(null)}
+                className="rounded-xl border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingTask}
+                onClick={confirmDeleteTask}
+                className="flex items-center gap-1.5 rounded-xl bg-destructive px-3.5 py-1.5 text-xs font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Trash2 className="size-3.5" />
+                <span>{isDeletingTask ? "Deleting..." : "Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -345,6 +554,10 @@ export function TeamInfoScreen({
 type TasksTabProps = {
   tasks: TeamInfoTask[];
   onToggle: (taskId: string, currentCompleted: boolean) => void;
+  onDelete: (
+    task: { id: string; title: string },
+    event: React.MouseEvent,
+  ) => void;
   searchQuery: string;
   newTaskTitle: string;
   setNewTaskTitle: (value: string) => void;
@@ -357,6 +570,7 @@ type TasksTabProps = {
 function TasksTab({
   tasks,
   onToggle,
+  onDelete,
   searchQuery,
   newTaskTitle,
   setNewTaskTitle,
@@ -401,40 +615,55 @@ function TasksTab({
       {/* Task list */}
       <div className="space-y-3">
         {tasks.map((task) => (
-          <button
+          <div
             key={task.id}
-            type="button"
-            onClick={() => onToggle(task.id, task.completed)}
-            className={`flex w-full items-center gap-4 rounded-2xl px-5 py-4 text-left transition-colors ${
-              task.completed ? "bg-[#E4FFEC]/60" : "bg-[#E4FFEC]"
+            className={`group/task flex w-full items-center justify-between gap-4 rounded-2xl border border-emerald-500/20 px-5 py-4 transition-colors ${
+              task.completed
+                ? "bg-[#E4FFEC]/60 dark:bg-emerald-950/20 opacity-75"
+                : "bg-[#E4FFEC] dark:bg-emerald-950/40"
             }`}
           >
-            {task.completed ? (
-              <CheckCircle2
-                className="size-7 shrink-0 text-[#22C55E]"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-            ) : (
-              <Circle
-                className="size-7 shrink-0 text-[#22C55E]"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-            )}
-            <span
-              className={`min-w-0 flex-1 text-base font-medium ${
-                task.completed
-                  ? "text-[#22C55E]/60 line-through"
-                  : "text-[#22C55E]"
-              }`}
+            <button
+              type="button"
+              onClick={() => onToggle(task.id, task.completed)}
+              className="flex min-w-0 flex-1 items-center gap-4 text-left"
             >
-              {task.title}
-            </span>
-            <span className="sr-only">
-              {task.completed ? "Completed" : "Not completed"}
-            </span>
-          </button>
+              {task.completed ? (
+                <CheckCircle2
+                  className="size-7 shrink-0 text-[#22C55E]"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              ) : (
+                <Circle
+                  className="size-7 shrink-0 text-[#22C55E]"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              )}
+              <span
+                className={`min-w-0 flex-1 text-base font-medium ${
+                  task.completed
+                    ? "text-[#16A34A]/70 dark:text-emerald-400/70 line-through"
+                    : "text-[#16A34A] dark:text-emerald-300"
+                }`}
+              >
+                {task.title}
+              </span>
+              <span className="sr-only">
+                {task.completed ? "Completed" : "Not completed"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              aria-label="Delete task"
+              onClick={(e) => onDelete(task, e)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-emerald-800/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/task:opacity-100 dark:text-emerald-300/40"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
         ))}
       </div>
 

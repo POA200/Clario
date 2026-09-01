@@ -19,6 +19,8 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-tasks: var(--tasks);
+  --color-announcements: var(--announcements);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -52,20 +54,22 @@
 :root {
   --background: #FEFEFF;
   --dashboard-surface: #F0EFFF;
-  --foreground: #3E3E3E;
+  --foreground: #000001;
   --card: #FEFEFF;
-  --card-foreground: #3E3E3E;
+  --card-foreground: #000001;
   --popover: #FEFEFF;
-  --popover-foreground: #3E3E3E;
+  --popover-foreground: #000001;
   --primary: #2511BF;
   --primary-foreground: #FEFEFF;
   --secondary: #4DEBF3;
   --secondary-foreground: #000001;
   --muted: #E0E0E0;
-  --muted-foreground: #727272;
+  --muted-foreground: #3E3E3E;
   --accent: #727272;
   --accent-foreground: #FEFEFF;
   --destructive: #D52727;
+  --tasks: #23CD34;
+  --announcements: #D52727;
   --border: #3E3E3E;
   --input: #3E3E3E;
   --ring: #2511BF;
@@ -76,48 +80,50 @@
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
   --sidebar: #FEFEFF;
-  --sidebar-foreground: #3E3E3E;
+  --sidebar-foreground: #000001;
   --sidebar-primary: #2511BF;
   --sidebar-primary-foreground: #FEFEFF;
   --sidebar-accent: #E0E0E0;
-  --sidebar-accent-foreground: #3E3E3E;
+  --sidebar-accent-foreground: #000001;
   --sidebar-border: #E0E0E0;
   --sidebar-ring: #2511BF;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --dashboard-surface: #3E3E3E;
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #000001;
+  --dashboard-surface: #121218;
+  --foreground: #FEFEFF;
+  --card: #121218;
+  --card-foreground: #FEFEFF;
+  --popover: #121218;
+  --popover-foreground: #FEFEFF;
+  --primary: #2511BF;
+  --primary-foreground: #FEFEFF;
+  --secondary: #4DEBF3;
+  --secondary-foreground: #000001;
+  --muted: #3E3E3E;
+  --muted-foreground: #E0E0E0;
+  --accent: #727272;
+  --accent-foreground: #FEFEFF;
+  --destructive: #D52727;
+  --tasks: #23CD34;
+  --announcements: #D52727;
+  --border: #3E3E3E;
+  --input: #3E3E3E;
+  --ring: #2511BF;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #000001;
+  --sidebar-foreground: #FEFEFF;
+  --sidebar-primary: #2511BF;
+  --sidebar-primary-foreground: #FEFEFF;
+  --sidebar-accent: #3E3E3E;
+  --sidebar-accent-foreground: #FEFEFF;
+  --sidebar-border: #3E3E3E;
+  --sidebar-ring: #2511BF;
 }
 
 @layer base {
@@ -140,4 +146,20 @@
 
 .clario-logo-image-inverse {
   filter: brightness(0) invert(1);
+}
+
+/* PWA & Safe Area Inset Support */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
 }

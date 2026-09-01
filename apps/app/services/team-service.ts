@@ -253,6 +253,7 @@ export type ChannelDetail = {
   icon: string;
   teamId: string;
   teamName: string;
+  isAdmin: boolean;
   members: {
     id: string;
     name: string;
@@ -301,12 +302,16 @@ export async function getChannel(
   const channel = team.channels[0];
   if (!channel) return null;
 
+  const currentMember = team.members.find((m) => m.userId === userId);
+  const isAdmin = team.creatorId === userId || currentMember?.role === "ADMIN";
+
   return {
     id: channel.id,
     name: channel.name,
     icon: channel.icon,
     teamId: team.id,
     teamName: team.name,
+    isAdmin,
     members: team.members.map((member) => ({
       id: member.user.id,
       name: member.user.name ?? member.user.email,
@@ -338,6 +343,7 @@ export type TeamInfo = {
   name: string;
   createdAt: string;
   memberCount: number;
+  isAdmin: boolean;
   members: TeamInfoMember[];
   tasks: TeamInfoTask[];
 };
@@ -380,11 +386,15 @@ export async function getTeamInfo(
 
   if (!team) return null;
 
+  const currentMember = team.members.find((m) => m.userId === userId);
+  const isAdmin = team.creatorId === userId || currentMember?.role === "ADMIN";
+
   return {
     id: team.id,
     name: team.name,
     createdAt: team.createdAt.toISOString(),
     memberCount: team.members.length,
+    isAdmin,
     members: team.members.map((member) => ({
       id: member.id,
       userId: member.userId,

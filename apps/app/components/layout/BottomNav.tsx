@@ -11,7 +11,7 @@ export function BottomNav() {
   const router = useRouter();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around px-2">
         {MOBILE_NAVIGATION.map((item) => {
           const Icon = item.icon;

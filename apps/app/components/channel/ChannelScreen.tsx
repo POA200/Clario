@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Circle,
+  Info,
   MessageCircle,
   MoreVertical,
   Search,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,27 +31,27 @@ const MESSAGE_TYPE_OPTIONS: { value: MessageType; label: string }[] = [
 
 const MESSAGE_STYLES: Record<MessageType, { bg: string; border: string }> = {
   NORMAL: {
-    bg: "bg-[#E8E7FF]",
-    border: "border-l-[#7B6CF6]",
+    bg: "bg-[#E8E7FF] dark:bg-card/90",
+    border: "border-l-[#7B6CF6] dark:border-l-primary",
   },
   ANNOUNCEMENT: {
-    bg: "bg-[#FFE4E4]",
-    border: "border-l-[#E53E3E]",
+    bg: "bg-[#FFE4E4] dark:bg-destructive/15",
+    border: "border-l-[#E53E3E] dark:border-l-destructive",
   },
   TASK: {
-    bg: "bg-[#E4FFEC]",
-    border: "border-l-[#22C55E]",
+    bg: "bg-[#E4FFEC] dark:bg-emerald-950/40",
+    border: "border-l-[#22C55E] dark:border-l-emerald-500",
   },
 };
 
 // Deterministic colors per sender
 const SENDER_COLORS = [
-  "text-[#16A34A]",
-  "text-[#E53E3E]",
-  "text-primary",
-  "text-[#D97706]",
-  "text-[#7C3AED]",
-  "text-[#0891B2]",
+  "text-[#16A34A] dark:text-emerald-400",
+  "text-[#E53E3E] dark:text-rose-400",
+  "text-primary dark:text-secondary",
+  "text-[#D97706] dark:text-amber-400",
+  "text-[#7C3AED] dark:text-purple-400",
+  "text-[#0891B2] dark:text-cyan-400",
 ];
 
 function getSenderColor(senderId: string, senderIds: string[]): string {
@@ -96,8 +101,17 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showDeleteChannelModal, setShowDeleteChannelModal] = useState(false);
+  const [isDeletingChannel, setIsDeletingChannel] = useState(false);
+  const [deleteChannelError, setDeleteChannelError] = useState("");
+
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typeMenuRef = useRef<HTMLDivElement>(null);
+  const optionsMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -172,7 +186,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
     return () => window.clearTimeout(timer);
   }, [searchQuery, showSearch, fetchMessages]);
 
-  // Close type menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       if (
@@ -181,14 +195,20 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
       ) {
         setShowTypeMenu(false);
       }
+      if (
+        optionsMenuRef.current &&
+        !optionsMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowOptionsMenu(false);
+      }
     }
 
-    if (showTypeMenu) {
+    if (showTypeMenu || showOptionsMenu) {
       document.addEventListener("mousedown", handleClick);
     }
 
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showTypeMenu]);
+  }, [showTypeMenu, showOptionsMenu]);
 
   // Poll for new messages every 5s
   useEffect(() => {
@@ -255,6 +275,96 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
     }
   }
 
+  async function handleToggleTask(
+    messageId: string,
+    currentCompleted?: boolean,
+  ) {
+    const nextCompleted = !currentCompleted;
+
+    // Optimistically update message state
+    setMessages((current) =>
+      current.map((m) =>
+        m.id === messageId ? { ...m, completed: nextCompleted } : m,
+      ),
+    );
+
+    try {
+      const response = await fetch(
+        `/api/teams/${channel.teamId}/tasks/${messageId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: nextCompleted }),
+        },
+      );
+
+      if (!response.ok) {
+        // Rollback on error
+        setMessages((current) =>
+          current.map((m) =>
+            m.id === messageId ? { ...m, completed: currentCompleted } : m,
+          ),
+        );
+      }
+    } catch {
+      setMessages((current) =>
+        current.map((m) =>
+          m.id === messageId ? { ...m, completed: currentCompleted } : m,
+        ),
+      );
+    }
+  }
+
+  async function handleConfirmDeleteMessage() {
+    if (!messageToDelete) return;
+    const id = messageToDelete;
+    setIsDeletingMessage(true);
+
+    // Optimistic removal
+    setMessages((current) => current.filter((m) => m.id !== id));
+    setMessageToDelete(null);
+
+    try {
+      await fetch(
+        `/api/teams/${channel.teamId}/channels/${channel.id}/messages?messageId=${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+    } catch {
+      fetchMessages();
+    } finally {
+      setIsDeletingMessage(false);
+    }
+  }
+
+  async function handleDeleteChannel() {
+    setIsDeletingChannel(true);
+    setDeleteChannelError("");
+
+    try {
+      const response = await fetch(
+        `/api/teams/${channel.teamId}/channels/${channel.id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDeleteChannelError(data?.error || "Failed to delete channel.");
+        setIsDeletingChannel(false);
+        return;
+      }
+
+      router.push(`/teams/${channel.teamId}`);
+    } catch {
+      setDeleteChannelError("Network error deleting channel.");
+      setIsDeletingChannel(false);
+    }
+  }
+
   function openSearch() {
     setShowSearch(true);
     setSearchQuery("");
@@ -272,14 +382,11 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   // Member avatars for header (max 3)
   const headerMembers = channel.members.slice(0, 3);
 
-  // Suppress unused variable warning — currentUser will be used for future features
-  void currentUser;
-
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background">
       {/* Header */}
       {showSearch ? (
-        <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+        <header className="flex shrink-0 items-center gap-3 border-b border-border bg-background px-4 py-3">
           <div className="relative min-w-0 flex-1">
             <Input
               aria-label="Search messages"
@@ -305,7 +412,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
           </button>
         </header>
       ) : (
-        <header className="flex shrink-0 items-center gap-3 px-4 py-3 md:px-6">
+        <header className="flex shrink-0 items-center gap-3 border-b border-border/40 bg-background px-4 py-3 md:px-6">
           <Link
             href={`/teams/${channel.teamId}`}
             aria-label={`Back to ${channel.teamName}`}
@@ -346,7 +453,10 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div
+            className="relative ml-auto flex items-center gap-1"
+            ref={optionsMenuRef}
+          >
             <button
               type="button"
               aria-label="Search messages"
@@ -358,12 +468,41 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
 
             <button
               type="button"
-              aria-label="Team info"
-              onClick={() => router.push(`/teams/${channel.teamId}/info`)}
+              aria-label="Channel options"
+              onClick={() => setShowOptionsMenu(!showOptionsMenu)}
               className="flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted"
             >
               <MoreVertical className="size-5" strokeWidth={2} />
             </button>
+
+            {showOptionsMenu && (
+              <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOptionsMenu(false);
+                    router.push(`/teams/${channel.teamId}/info`);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
+                >
+                  <Info className="size-4 text-muted-foreground" />
+                  <span>Team Info & Tasks</span>
+                </button>
+                {channel.isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOptionsMenu(false);
+                      setShowDeleteChannelModal(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <Trash2 className="size-4" />
+                    <span>Delete Channel</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </header>
       )}
@@ -397,10 +536,12 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
         )}
 
         {!isLoading && messages.length > 0 && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {messages.map((message) => {
               const styles = MESSAGE_STYLES[message.type];
               const senderColor = getSenderColor(message.sender.id, senderIds);
+              const canDelete =
+                currentUser?.id === message.sender.id || channel.isAdmin;
               const initial = (
                 message.sender.username ??
                 message.sender.name ??
@@ -410,17 +551,17 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                 .toUpperCase();
 
               return (
-                <div key={message.id} className="flex gap-3">
+                <div key={message.id} className="group flex gap-3">
                   {/* Avatar */}
                   {message.sender.image ? (
                     <img
                       src={message.sender.image}
                       alt=""
-                      className="size-10 shrink-0 rounded-full border border-border object-cover"
+                      className="size-9 shrink-0 rounded-full border border-border object-cover"
                     />
                   ) : (
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-muted">
-                      <span className="text-sm font-medium text-muted-foreground">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted">
+                      <span className="text-xs font-medium text-muted-foreground">
                         {initial}
                       </span>
                     </div>
@@ -428,27 +569,71 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
 
                   {/* Message content */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className={`text-sm font-semibold ${senderColor}`}>
-                        {message.sender.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTimestamp(message.createdAt)}
-                      </span>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="flex items-baseline gap-2">
+                        <span
+                          className={`text-xs font-semibold ${senderColor}`}
+                        >
+                          {message.sender.name}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {formatTimestamp(message.createdAt)}
+                        </span>
+                      </div>
+
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => setMessageToDelete(message.id)}
+                          aria-label="Delete message"
+                          className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive text-muted-foreground p-1"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
                     </div>
 
                     <div
-                      className={`mt-1 rounded-lg border-l-4 px-4 py-3 ${styles.bg} ${styles.border}`}
+                      className={`mt-1 rounded-xl border-l-4 p-3.5 shadow-2xs transition-colors ${styles.bg} ${styles.border}`}
                     >
-                      {message.type === "TASK" && message.deadline && (
-                        <div className="mb-1 flex items-center gap-1.5 text-xs text-[#22C55E]">
-                          <span className="inline-flex size-3.5 items-center justify-center rounded-full border border-[#22C55E]">
-                            <span className="sr-only">Task</span>
-                          </span>
-                          Deadline: {formatDeadline(message.deadline)}
+                      {message.type === "TASK" && (
+                        <div className="mb-2 flex items-center justify-between border-b border-border/40 pb-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleToggleTask(message.id, message.completed)
+                            }
+                            className="flex items-center gap-2 text-xs font-semibold text-foreground hover:opacity-80"
+                          >
+                            {message.completed ? (
+                              <CheckCircle2 className="size-4 text-emerald-500" />
+                            ) : (
+                              <Circle className="size-4 text-muted-foreground" />
+                            )}
+                            <span
+                              className={
+                                message.completed
+                                  ? "line-through text-muted-foreground"
+                                  : "text-foreground"
+                              }
+                            >
+                              {message.completed
+                                ? "Task Completed"
+                                : "Mark as completed"}
+                            </span>
+                          </button>
+
+                          {message.deadline && (
+                            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                              Due: {formatDeadline(message.deadline)}
+                            </span>
+                          )}
                         </div>
                       )}
-                      <p className="text-sm text-foreground">
+
+                      <p
+                        className={`text-sm text-foreground whitespace-pre-wrap break-words ${message.type === "TASK" && message.completed ? "line-through text-muted-foreground" : ""}`}
+                      >
                         {message.content}
                       </p>
                     </div>
@@ -462,14 +647,14 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
       </div>
 
       {/* Composer */}
-      <div className="shrink-0 border-t border-border px-4 py-3 md:px-6">
-        <form onSubmit={handleSend} className="flex items-end gap-2">
+      <div className="shrink-0 border-t border-border bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:px-6">
+        <form onSubmit={handleSend} className="flex items-center gap-2">
           {/* Type selector */}
-          <div className="relative" ref={typeMenuRef}>
+          <div className="relative shrink-0" ref={typeMenuRef}>
             <button
               type="button"
               onClick={() => setShowTypeMenu(!showTypeMenu)}
-              className="flex h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="flex h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
               {MESSAGE_TYPE_OPTIONS.find((o) => o.value === messageType)
                 ?.label ?? "Normal"}
@@ -481,7 +666,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             </button>
 
             {showTypeMenu && (
-              <div className="absolute bottom-full left-0 mb-2 w-40 overflow-hidden rounded-lg border border-border bg-background p-1 shadow-lg">
+              <div className="absolute bottom-full left-0 mb-2 w-36 overflow-hidden rounded-xl border border-border bg-background p-1 shadow-lg">
                 {MESSAGE_TYPE_OPTIONS.map((option) => (
                   <button
                     key={option.value}
@@ -490,9 +675,9 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                       setMessageType(option.value);
                       setShowTypeMenu(false);
                     }}
-                    className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
+                    className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors hover:bg-muted ${
                       messageType === option.value
-                        ? "font-medium text-foreground"
+                        ? "font-semibold text-primary"
                         : "text-foreground"
                     }`}
                   >
@@ -509,7 +694,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+              className="h-11 rounded-xl border border-border bg-background px-3 text-xs text-foreground"
               aria-label="Task deadline"
             />
           )}
@@ -519,7 +704,11 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             ref={inputRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="write message...."
+            placeholder={
+              messageType === "TASK"
+                ? "Describe task to create..."
+                : "Write a message..."
+            }
             disabled={isSending}
             maxLength={4000}
             className="h-11 min-w-0 flex-1 rounded-full border-border bg-background px-4 text-sm placeholder:text-muted-foreground"
@@ -529,13 +718,129 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
           <button
             type="submit"
             disabled={isSending || !content.trim()}
-            className="flex h-11 items-center gap-2 bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 rounded-full"
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Send
-            <Send className="size-4" strokeWidth={2} />
+            <span>Send</span>
+            <Send className="size-3.5" strokeWidth={2.2} />
           </button>
         </form>
       </div>
+
+      {/* Delete Channel Confirmation Modal */}
+      {showDeleteChannelModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isDeletingChannel) {
+              setShowDeleteChannelModal(false);
+              setDeleteChannelError("");
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-destructive">
+              <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">
+                  Delete Channel
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  This will delete &quot;{channel.name}&quot; and all its
+                  messages.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-foreground/80">
+              Are you sure you want to delete this channel? All chat messages
+              inside will be permanently deleted.
+            </p>
+
+            {deleteChannelError && (
+              <div
+                role="alert"
+                className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive"
+              >
+                {deleteChannelError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingChannel}
+                onClick={() => setShowDeleteChannelModal(false)}
+                className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingChannel}
+                onClick={handleDeleteChannel}
+                className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
+                <span>
+                  {isDeletingChannel ? "Deleting..." : "Delete Channel"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Message Confirmation Modal */}
+      {messageToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isDeletingMessage) {
+              setMessageToDelete(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl space-y-3.5">
+            <div className="flex items-center gap-2.5 text-destructive">
+              <div className="flex size-9 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="size-4.5" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">
+                Delete Message?
+              </h2>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Are you sure you want to delete this message? This action cannot
+              be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isDeletingMessage}
+                onClick={() => setMessageToDelete(null)}
+                className="rounded-xl border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingMessage}
+                onClick={handleConfirmDeleteMessage}
+                className="flex items-center gap-1.5 rounded-xl bg-destructive px-3.5 py-1.5 text-xs font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Trash2 className="size-3.5" />
+                <span>{isDeletingMessage ? "Deleting..." : "Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

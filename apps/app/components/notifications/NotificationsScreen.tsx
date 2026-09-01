@@ -51,17 +51,19 @@ function formatRelativeTime(dateString: string): string {
 
 function getNotificationIcon(type: string) {
   switch (type) {
+    case "TASK":
     case "TASK_CREATED":
       return (
         <CheckCircle2 className="size-5 text-emerald-500" strokeWidth={2} />
       );
+    case "ANNOUNCEMENT":
+      return <Bell className="size-5 text-amber-500" strokeWidth={2} />;
     case "MEMBER_JOINED":
     case "TEAM_INVITE":
       return <Users className="size-5 text-primary" strokeWidth={2} />;
     case "MESSAGE":
-      return <MessageSquare className="size-5 text-blue-500" strokeWidth={2} />;
     default:
-      return <Bell className="size-5 text-primary" strokeWidth={2} />;
+      return <MessageSquare className="size-5 text-blue-500" strokeWidth={2} />;
   }
 }
 

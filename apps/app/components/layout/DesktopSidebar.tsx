@@ -5,7 +5,7 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DASHBOARD_NAVIGATION } from "@/data/navigation";
 import { getTeamNavigationId } from "@/services/team-client";
 
@@ -31,6 +31,7 @@ export function DesktopSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
+  const lastKnownUnreadCountRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,7 +39,45 @@ export function DesktopSidebar() {
       fetch("/api/notifications")
         .then((res) => res.json())
         .then((data) => {
-          if (isMounted && typeof data?.unreadCount === "number") {
+          if (!isMounted) return;
+          if (typeof data?.unreadCount === "number") {
+            // If new notification arrived and permissions granted, trigger web notification
+            if (
+              lastKnownUnreadCountRef.current !== null &&
+              data.unreadCount > lastKnownUnreadCountRef.current &&
+              typeof window !== "undefined" &&
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              const latest = data.notifications?.[0];
+              if (latest) {
+                try {
+                  const n = new Notification(latest.title || "Clario", {
+                    body: latest.message || "You have a new notification.",
+                    icon: "/icons/icon-192x192.png",
+                  });
+                  n.onclick = () => {
+                    window.focus();
+                    if (latest.link) router.push(latest.link);
+                  };
+                } catch {
+                  if (
+                    "serviceWorker" in navigator &&
+                    navigator.serviceWorker.ready
+                  ) {
+                    navigator.serviceWorker.ready.then((reg) => {
+                      reg.showNotification(latest.title || "Clario", {
+                        body: latest.message || "You have a new notification.",
+                        icon: "/icons/icon-192x192.png",
+                        data: { url: latest.link || "/notifications" },
+                      });
+                    });
+                  }
+                }
+              }
+            }
+
+            lastKnownUnreadCountRef.current = data.unreadCount;
             setUnreadCount(data.unreadCount);
           }
         })
@@ -48,12 +87,12 @@ export function DesktopSidebar() {
     }
 
     fetchUnread();
-    const interval = setInterval(fetchUnread, 60_000);
+    const interval = setInterval(fetchUnread, 10_000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [router]);
 
   function handleNavigation(
     event: React.MouseEvent<HTMLAnchorElement>,

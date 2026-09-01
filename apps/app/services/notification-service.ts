@@ -98,13 +98,37 @@ export async function createTeamNotification(data: {
         teamId: data.teamId,
         ...(data.excludeUserId ? { userId: { not: data.excludeUserId } } : {}),
       },
-      select: { userId: true },
+      include: {
+        user: {
+          include: {
+            preference: true,
+          },
+        },
+      },
     });
 
     if (members.length === 0) return;
 
+    // Filter members based on their notification preferences
+    const eligibleMembers = members.filter((m) => {
+      const pref = m.user.preference;
+      if (!pref) return true;
+      if (data.type === "ANNOUNCEMENT" && pref.receiveAnnouncements === false) {
+        return false;
+      }
+      if (
+        (data.type === "TASK" || data.type === "TASK_CREATED") &&
+        pref.receiveTaskUpdates === false
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    if (eligibleMembers.length === 0) return;
+
     await prisma.notification.createMany({
-      data: members.map((m) => ({
+      data: eligibleMembers.map((m) => ({
         userId: m.userId,
         title: data.title,
         message: data.message,

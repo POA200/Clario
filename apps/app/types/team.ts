@@ -32,6 +32,7 @@ export type ChannelMessage = {
   content: string;
   type: MessageType;
   deadline?: string;
+  completed?: boolean;
   createdAt: string;
   sender: {
     id: string;

@@ -7,6 +7,7 @@ import {
   Circle,
   Plus,
   Search,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -118,6 +119,46 @@ export function TasksScreen({ initialGroups }: TasksScreenProps) {
         ),
       );
       setErrorMessage("Network error updating task.");
+    }
+  }
+
+  const [taskToDelete, setTaskToDelete] = useState<{
+    teamId: string;
+    taskId: string;
+    title: string;
+  } | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+
+  async function handleConfirmDeleteTask() {
+    if (!taskToDelete) return;
+    const { teamId, taskId } = taskToDelete;
+    setIsDeletingTask(true);
+
+    // Optimistic UI update
+    setGroups((current) =>
+      current.map((g) =>
+        g.teamId === teamId
+          ? {
+              ...g,
+              tasks: g.tasks.filter((t) => t.id !== taskId),
+            }
+          : g,
+      ),
+    );
+    setTaskToDelete(null);
+
+    try {
+      const response = await fetch(`/api/teams/${teamId}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        setErrorMessage("Failed to delete task. Please try again.");
+      }
+    } catch {
+      setErrorMessage("Network error deleting task.");
+    } finally {
+      setIsDeletingTask(false);
     }
   }
 
@@ -292,40 +333,66 @@ export function TasksScreen({ initialGroups }: TasksScreenProps) {
                 {/* Task items */}
                 <div className="space-y-2.5">
                   {group.tasks.map((task) => (
-                    <button
+                    <div
                       key={task.id}
-                      type="button"
-                      onClick={() =>
-                        handleToggleTask(group.teamId, task.id, task.completed)
-                      }
-                      className="flex w-full items-center gap-3.5 rounded-2xl bg-[#E4FFEC] px-4 py-3.5 text-left transition-colors hover:bg-[#D5F5E0] focus-visible:outline-2 focus-visible:outline-primary md:px-5 md:py-4"
+                      className={`group/task flex w-full items-center justify-between gap-3.5 rounded-2xl border border-emerald-500/20 bg-[#E4FFEC] px-4 py-3.5 transition-colors hover:bg-[#D5F5E0] dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 md:px-5 md:py-4 ${
+                        task.completed ? "opacity-75" : ""
+                      }`}
                     >
-                      {task.completed ? (
-                        <CheckCircle2
-                          className="size-6 shrink-0 text-[#22C55E]"
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Circle
-                          className="size-6 shrink-0 text-[#22C55E]"
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                      )}
-
-                      <span
-                        className={`min-w-0 flex-1 text-sm font-semibold text-[#16A34A] md:text-base ${
-                          task.completed ? "line-through opacity-80" : ""
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleToggleTask(
+                            group.teamId,
+                            task.id,
+                            task.completed,
+                          )
+                        }
+                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left focus-visible:outline-2 focus-visible:outline-primary"
                       >
-                        {task.title}
-                      </span>
+                        {task.completed ? (
+                          <CheckCircle2
+                            className="size-6 shrink-0 text-[#22C55E]"
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Circle
+                            className="size-6 shrink-0 text-[#22C55E]"
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                        )}
 
-                      <span className="sr-only">
-                        {task.completed ? "Completed" : "Not completed"}
-                      </span>
-                    </button>
+                        <span
+                          className={`min-w-0 flex-1 text-sm font-semibold text-[#16A34A] dark:text-emerald-300 md:text-base ${
+                            task.completed ? "line-through opacity-80" : ""
+                          }`}
+                        >
+                          {task.title}
+                        </span>
+
+                        <span className="sr-only">
+                          {task.completed ? "Completed" : "Not completed"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-label="Delete task"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTaskToDelete({
+                            teamId: group.teamId,
+                            taskId: task.id,
+                            title: task.title,
+                          });
+                        }}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-emerald-800/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/task:opacity-100 dark:text-emerald-300/40"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   ))}
 
                   {group.tasks.length === 0 && (
@@ -358,6 +425,54 @@ export function TasksScreen({ initialGroups }: TasksScreenProps) {
           </div>
         </section>
       </main>
+
+      {/* Delete Task Confirmation Modal */}
+      {taskToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isDeletingTask) {
+              setTaskToDelete(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl space-y-3.5">
+            <div className="flex items-center gap-2.5 text-destructive">
+              <div className="flex size-9 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="size-4.5" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">
+                Delete Task?
+              </h2>
+            </div>
+
+            <p className="text-xs text-foreground/80 line-clamp-2">
+              Are you sure you want to delete &quot;{taskToDelete.title}&quot;?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isDeletingTask}
+                onClick={() => setTaskToDelete(null)}
+                className="rounded-xl border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingTask}
+                onClick={handleConfirmDeleteTask}
+                className="flex items-center gap-1.5 rounded-xl bg-destructive px-3.5 py-1.5 text-xs font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Trash2 className="size-3.5" />
+                <span>{isDeletingTask ? "Deleting..." : "Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

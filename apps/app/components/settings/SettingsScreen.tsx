@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
+  AlertTriangle,
   ArrowLeft,
   Bell,
   Check,
@@ -13,12 +14,14 @@ import {
   Moon,
   Palette,
   Sun,
+  Trash2,
   UserRound,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import type { UserSettings } from "@/services/settings-service";
 
 type SwitchProps = {
@@ -71,19 +74,25 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
   const [receiveAnnouncements, setReceiveAnnouncements] = useState(
     preferences.receiveAnnouncements,
   );
-  const [emailNotifications, setEmailNotifications] = useState(
+  const [pushNotifications, setPushNotifications] = useState(
     preferences.emailNotifications,
   );
 
+  const { setTheme: globalSetTheme } = useTheme();
+
   // Appearance states
   const [theme, setTheme] = useState(preferences.theme);
-  const [accentColor, setAccentColor] = useState(preferences.accentColor);
-  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        setTheme(savedTheme);
+      }
+    } catch {}
+  }, []);
 
   // Security states
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(
-    preferences.twoFactorEnabled,
-  );
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -93,9 +102,37 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const [toastMessage, setToastMessage] = useState("");
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
-  const displayName = user.name || "Peter";
-  const displayUsername = user.username ? `@${user.username}` : "@iPeter_crx";
+  const displayName = user.name || "Anonymous User";
+  const displayUsername = user.username ? `@${user.username}` : "@Anonymous";
+
+  async function handleDeleteAccount() {
+    setIsDeletingAccount(true);
+    setDeleteError("");
+
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDeleteError(data?.error || "Failed to delete account.");
+        setIsDeletingAccount(false);
+        return;
+      }
+
+      await signOut({ callbackUrl: "/login" });
+    } catch {
+      setDeleteError("An unexpected network error occurred. Please try again.");
+      setIsDeletingAccount(false);
+    }
+  }
 
   function showToast(msg: string) {
     setToastMessage(msg);
@@ -131,36 +168,32 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
     updatePreference("receiveAnnouncements", val);
   }
 
-  function handleEmailNotificationsToggle(val: boolean) {
-    setEmailNotifications(val);
-    updatePreference("emailNotifications", val);
-  }
+  async function handlePushNotificationsToggle(val: boolean) {
+    if (val && typeof window !== "undefined" && "Notification" in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          showToast("Push notification permission denied in browser");
+          setPushNotifications(false);
+          return;
+        }
+      } catch {
+        // Ignore
+      }
+    }
 
-  function handleTwoFactorToggle(val: boolean) {
-    setTwoFactorEnabled(val);
-    updatePreference("twoFactorEnabled", val);
+    setPushNotifications(val);
+    updatePreference("emailNotifications", val);
     showToast(
-      val
-        ? "Two-Factor Authentication enabled"
-        : "Two-Factor Authentication disabled",
+      val ? "Push notifications enabled" : "Push notifications disabled",
     );
   }
 
   function handleThemeToggle() {
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
-    if (nextTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    globalSetTheme(nextTheme);
     updatePreference("theme", nextTheme);
-  }
-
-  function handleAccentColorChange(color: string) {
-    setAccentColor(color);
-    setShowColorPicker(false);
-    updatePreference("accentColor", color);
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -248,7 +281,7 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
           {/* User Profile Preview Card (media_1788280260819.png) */}
           <Link
             href="/profile"
-            className="flex items-center justify-between rounded-[22px] border border-[#D5CAFE]/60 bg-[#EAE6FE] p-4 transition-opacity hover:opacity-95"
+            className="flex items-center justify-between rounded-[22px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-4 transition-opacity hover:opacity-95"
           >
             <div className="flex items-center gap-3.5">
               <div className="flex size-12 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
@@ -259,7 +292,7 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
                     className="size-full object-cover"
                   />
                 ) : (
-                  <div className="flex size-full items-center justify-center bg-[#E5E7EB] text-primary">
+                  <div className="flex size-full items-center justify-center bg-muted text-muted-foreground">
                     <UserRound className="size-6 text-muted-foreground" />
                   </div>
                 )}
@@ -279,7 +312,7 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
           </Link>
 
           {/* Notifications Card */}
-          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] p-5 space-y-4">
+          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-5 space-y-4">
             <div className="flex items-center gap-2 text-base font-bold text-foreground">
               <Bell className="size-5" />
               <span>Notifications</span>
@@ -309,18 +342,18 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
 
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-foreground">
-                Email notifications
+                Push notifications
               </span>
               <Switch
-                checked={emailNotifications}
-                onChange={handleEmailNotificationsToggle}
-                aria-label="Email notifications"
+                checked={pushNotifications}
+                onChange={handlePushNotificationsToggle}
+                aria-label="Push notifications"
               />
             </div>
           </div>
 
           {/* Appearance Card */}
-          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] p-5 space-y-4">
+          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-5 space-y-4">
             <div className="flex items-center gap-2 text-base font-bold text-foreground">
               <Palette className="size-5" />
               <span>Appearance</span>
@@ -341,44 +374,10 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
                 )}
               </button>
             </div>
-
-            <div className="relative flex items-center justify-between text-sm">
-              <span className="font-semibold text-foreground">
-                Ascent color
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                aria-label="Change accent color"
-                className="flex size-6 items-center justify-center rounded-md border border-white/60 shadow-sm transition-transform hover:scale-110"
-                style={{ backgroundColor: accentColor }}
-              />
-
-              {showColorPicker && (
-                <div className="absolute right-0 top-8 z-30 flex gap-2 rounded-xl border border-border bg-background p-2 shadow-lg">
-                  {[
-                    "#2F1AC4",
-                    "#2563EB",
-                    "#059669",
-                    "#D97706",
-                    "#DC2626",
-                    "#7C3AED",
-                  ].map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => handleAccentColorChange(c)}
-                      className="size-6 rounded-md border border-white"
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Security Card */}
-          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] p-5 space-y-4">
+          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-5 space-y-4">
             <div className="flex items-center gap-2 text-base font-bold text-foreground">
               <Lock className="size-5" />
               <span>Security</span>
@@ -394,29 +393,129 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
               </span>
               <ChevronRight className="size-5 text-foreground" />
             </button>
-
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-foreground">
-                Two-Factor Authentication
-              </span>
-              <Switch
-                checked={twoFactorEnabled}
-                onChange={handleTwoFactorToggle}
-                aria-label="Two-Factor Authentication"
-              />
-            </div>
           </div>
 
           {/* Logout Button */}
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#DC2626] py-4 text-base font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-destructive"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive py-3.5 text-base font-semibold text-destructive-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-destructive"
           >
             <LogOut className="size-5" />
             <span>Logout</span>
           </button>
+
+          {/* Delete Account Button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteAccount(true);
+                setDeleteConfirmText("");
+                setDeleteError("");
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 py-3.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-2 focus-visible:outline-destructive"
+            >
+              <Trash2 className="size-4" />
+              <span>Delete Account</span>
+            </button>
+          </div>
         </div>
+
+        {/* Delete Account Confirmation Modal */}
+        {showDeleteAccount && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !isDeletingAccount) {
+                setShowDeleteAccount(false);
+                setDeleteConfirmText("");
+                setDeleteError("");
+              }
+            }}
+          >
+            <div className="w-full max-w-md rounded-[28px] border border-border bg-background p-6 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3 text-destructive">
+                <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10">
+                  <AlertTriangle className="size-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">
+                    Delete Account
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    This action is permanent and cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm text-foreground/80">
+                Are you sure you want to delete your Clario account? All your
+                personal profile information, messages, team memberships, and
+                tasks will be permanently removed.
+              </p>
+
+              <div className="rounded-xl bg-destructive/10 p-3.5 space-y-2">
+                <p className="text-xs font-medium text-foreground">
+                  To confirm, type{" "}
+                  <span className="font-bold text-destructive select-all">
+                    delete my account
+                  </span>{" "}
+                  below:
+                </p>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="delete my account"
+                  disabled={isDeletingAccount}
+                  autoFocus
+                  className="h-10 rounded-lg border-destructive/30 bg-background text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-destructive"
+                />
+              </div>
+
+              {deleteError && (
+                <div
+                  role="alert"
+                  className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive"
+                >
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeletingAccount}
+                  onClick={() => {
+                    setShowDeleteAccount(false);
+                    setDeleteConfirmText("");
+                  }}
+                  className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    isDeletingAccount ||
+                    deleteConfirmText.trim().toLowerCase() !==
+                      "delete my account"
+                  }
+                  onClick={handleDeleteAccount}
+                  className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Trash2 className="size-4" />
+                  <span>
+                    {isDeletingAccount
+                      ? "Deleting..."
+                      : "I understand, delete my account"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Change Password Modal / Sheet (media_1788280268257.png) */}
         {showChangePassword && (

@@ -360,28 +360,32 @@ export function TeamScreen({ team }: TeamScreenProps) {
                     href={`/teams/${team.id}/channels/${channel.id}`}
                     className={`flex min-w-0 items-center gap-4 rounded-lg py-1 transition-colors hover:bg-background/50 focus-visible:outline-2 focus-visible:outline-primary md:gap-5 ${
                       channel.unread
-                        ? "text-black font-semibold"
-                        : "text-foreground"
+                        ? "text-foreground font-semibold"
+                        : "text-foreground/50 font-normal"
                     }`}
                   >
                     <ChannelIcon
                       className={`size-5 shrink-0 md:size-5 ${
-                        channel.unread ? "text-black" : "text-muted-foreground"
+                        channel.unread
+                          ? "text-foreground"
+                          : "text-foreground/80"
                       }`}
-                      strokeWidth={1.8}
+                      strokeWidth={channel.unread ? 2.2 : 1.8}
                       aria-hidden="true"
                     />
 
                     <span
-                      className="h-7 w-px shrink-0 bg-border"
+                      className={`h-7 w-px shrink-0 ${
+                        channel.unread ? "bg-border" : "bg-border/40"
+                      }`}
                       aria-hidden="true"
                     />
 
                     <span
                       className={`min-w-0 truncate text-lg md:text-xl ${
                         channel.unread
-                          ? "text-black font-semibold"
-                          : "text-foreground"
+                          ? "text-foreground font-semibold"
+                          : "text-foreground/50 font-normal"
                       }`}
                     >
                       {channel.name}
@@ -389,7 +393,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
 
                     {channel.unread && (
                       <span
-                        className="ml-auto size-2.5 shrink-0 rounded-full bg-black"
+                        className="ml-auto size-2.5 shrink-0 rounded-full bg-foreground"
                         aria-label="Unread messages"
                       />
                     )}
