@@ -26,16 +26,26 @@ export function LoginForm() {
         email: email.trim().toLowerCase(),
         password,
         redirect: false,
+        callbackUrl: "/dashboard",
       });
 
-      if (result?.error) {
+      if (!result) {
+        setError(
+          "Unable to connect to authentication server. Please try again.",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (result.error) {
         setError("Invalid email or password.");
         setIsSubmitting(false);
         return;
       }
 
-      window.location.href = "/dashboard";
-    } catch {
+      window.location.href = result.url || "/dashboard";
+    } catch (err) {
+      console.error("Login submission error:", err);
       setError("An unexpected error occurred during login. Please try again.");
       setIsSubmitting(false);
     }
