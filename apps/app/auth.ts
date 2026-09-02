@@ -5,17 +5,6 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/prisma";
 
-const isProd = process.env.NODE_ENV === "production";
-const useSecureCookies =
-  isProd &&
-  (process.env.NEXTAUTH_URL?.startsWith("https://") ||
-    process.env.VERCEL_ENV === "production" ||
-    Boolean(process.env.VERCEL) ||
-    Boolean(process.env.VERCEL_URL) ||
-    !process.env.NEXTAUTH_URL?.startsWith("http://"));
-
-const cookiePrefix = useSecureCookies ? "__Secure-" : "";
-
 export const authOptions: NextAuthOptions = {
   secret:
     process.env.NEXTAUTH_SECRET ||
@@ -25,22 +14,14 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 365 * 24 * 60 * 60, // 365 days persistent session
   },
-  useSecureCookies,
-  cookies: {
-    sessionToken: {
-      name: `${cookiePrefix}next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: useSecureCookies,
-        maxAge: 365 * 24 * 60 * 60,
-      },
-    },
-  },
   pages: { signIn: "/login" },
 
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/dashboard`;
+    },
     async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {
         try {

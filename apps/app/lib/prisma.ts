@@ -7,17 +7,18 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const connectionString =
-  process.env.DATABASE_URL || process.env.DIRECT_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not configured");
-}
+  process.env.DATABASE_URL ||
+  process.env.DIRECT_URL ||
+  "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
 const pool = new Pool({
   connectionString,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl:
+    connectionString.includes("localhost") || connectionString.includes("placeholder")
+      ? false
+      : {
+          rejectUnauthorized: false,
+        },
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,

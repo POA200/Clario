@@ -44,7 +44,7 @@ export function LoginForm() {
       }
 
       if (result.ok) {
-        window.location.href = result.url || "/dashboard";
+        window.location.href = "/dashboard";
       } else {
         setError("Invalid email or password.");
         setIsSubmitting(false);
