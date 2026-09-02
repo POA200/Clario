@@ -51,10 +51,18 @@ export function LoginForm() {
       }
     } catch (err: unknown) {
       console.error("Login submission error:", err);
-      const message =
-        err instanceof Error && err.message && !err.message.includes("fetch")
+      const isSyntaxOrDocType =
+        err instanceof Error &&
+        (err.message.includes("is not valid JSON") ||
+          err.message.includes("DOCTYPE") ||
+          err.message.includes("Unexpected token") ||
+          err.message.includes("fetch"));
+
+      const message = isSyntaxOrDocType
+        ? "Unable to reach the authentication server. Please check your connection and try again."
+        : err instanceof Error && err.message
           ? err.message
-          : "Invalid email or password. Please check your credentials.";
+          : "Invalid email or password. Please try again.";
       setError(message);
       setIsSubmitting(false);
     }

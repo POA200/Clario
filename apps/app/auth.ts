@@ -1,4 +1,3 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -22,7 +21,6 @@ export const authOptions: NextAuthOptions = {
     process.env.NEXTAUTH_SECRET ||
     process.env.AUTH_SECRET ||
     "clario-jwt-secret-key-2026",
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 365 * 24 * 60 * 60, // 365 days persistent session
@@ -43,6 +41,38 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
 
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user.email) {
+        try {
+          const email = user.email.toLowerCase().trim();
+          const existingUser = await prisma.user.findUnique({
+            where: { email },
+          });
+
+          if (!existingUser) {
+            const username =
+              email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") +
+              "_" +
+              Math.floor(Math.random() * 1000);
+            const newUser = await prisma.user.create({
+              data: {
+                email,
+                name: user.name || email.split("@")[0],
+                username,
+                image: user.image || null,
+              },
+            });
+            user.id = newUser.id;
+          } else {
+            user.id = existingUser.id;
+          }
+        } catch (err) {
+          console.error("[Auth] Error handling Google sign in user:", err);
+        }
+      }
+      return true;
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
