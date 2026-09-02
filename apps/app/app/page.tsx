@@ -20,11 +20,11 @@ export default async function OnboardingPage() {
           href="/login"
           className={cn(
             buttonVariants({ size: "lg" }),
-            "absolute bottom-8 left-1/2 -translate-x-1/2 bg-background px-10 text-primary hover:bg-background/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-background",
+            "absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-white px-10 text-primary shadow-lg hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white dark:bg-white dark:text-primary dark:hover:bg-white/90",
           )}
         >
           Continue to Clario
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <ArrowRight className="ml-2 h-4 w-4 text-primary" />
         </Link>
       </div>
     </main>
