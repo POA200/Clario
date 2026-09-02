@@ -43,10 +43,19 @@ export function LoginForm() {
         return;
       }
 
-      window.location.href = result.url || "/dashboard";
-    } catch (err) {
+      if (result.ok) {
+        window.location.href = result.url || "/dashboard";
+      } else {
+        setError("Invalid email or password.");
+        setIsSubmitting(false);
+      }
+    } catch (err: unknown) {
       console.error("Login submission error:", err);
-      setError("An unexpected error occurred during login. Please try again.");
+      const message =
+        err instanceof Error && err.message && !err.message.includes("fetch")
+          ? err.message
+          : "Invalid email or password. Please check your credentials.";
+      setError(message);
       setIsSubmitting(false);
     }
   }

@@ -6,6 +6,17 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/prisma";
 
+const isProd = process.env.NODE_ENV === "production";
+const useSecureCookies =
+  isProd &&
+  (process.env.NEXTAUTH_URL?.startsWith("https://") ||
+    process.env.VERCEL_ENV === "production" ||
+    Boolean(process.env.VERCEL) ||
+    Boolean(process.env.VERCEL_URL) ||
+    !process.env.NEXTAUTH_URL?.startsWith("http://"));
+
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+
 export const authOptions: NextAuthOptions = {
   secret:
     process.env.NEXTAUTH_SECRET ||
@@ -16,20 +27,15 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 365 * 24 * 60 * 60, // 365 days persistent session
   },
+  useSecureCookies,
   cookies: {
     sessionToken: {
-      name:
-        process.env.NODE_ENV === "production" &&
-        process.env.NEXTAUTH_URL?.startsWith("https")
-          ? "__Secure-next-auth.session-token"
-          : "next-auth.session-token",
+      name: `${cookiePrefix}next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure:
-          process.env.NODE_ENV === "production" &&
-          process.env.NEXTAUTH_URL?.startsWith("https"),
+        secure: useSecureCookies,
         maxAge: 365 * 24 * 60 * 60,
       },
     },

@@ -682,13 +682,13 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                       </div>
 
                       {(canEdit || canDelete) && (
-                        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                           {canEdit && (
                             <button
                               type="button"
                               onClick={() => handleStartEdit(message)}
                               aria-label="Edit message"
-                              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                             >
                               <Pencil className="size-3.5" />
                             </button>
@@ -698,7 +698,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                               type="button"
                               onClick={() => setMessageToDelete(message.id)}
                               aria-label="Delete message"
-                              className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                             >
                               <Trash2 className="size-3.5" />
                             </button>
