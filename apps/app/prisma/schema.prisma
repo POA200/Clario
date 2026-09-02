@@ -71,6 +71,7 @@ model Team {
   id        String       @id @default(cuid())
   name      String
   slug      String       @unique
+  avatar    String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   creatorId String
@@ -168,6 +169,7 @@ model Channel {
   name      String
   slug      String
   icon      String   @default("messages")
+  image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   teamId    String

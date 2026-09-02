@@ -1,11 +1,17 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ClarioLogo } from "@/components/common/ClarioLogo";
 import { buttonVariants } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const user = await getCurrentUser();
+  if (user?.id) {
+    redirect("/dashboard");
+  }
   return (
     <main className="min-h-dvh bg-background p-4">
       <div className="relative flex min-h-[calc(100dvh-2rem)] items-center justify-center rounded-[24px] bg-primary">

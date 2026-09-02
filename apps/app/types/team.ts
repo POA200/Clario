@@ -12,7 +12,8 @@ export type TeamMember = {
 export type TeamChannel = {
   id: string;
   name: string;
-  icon: "messages" | "announcement" | "design" | "development";
+  icon: string;
+  image?: string | null;
   unread: boolean;
 };
 
@@ -34,6 +35,7 @@ export type ChannelMessage = {
   deadline?: string;
   completed?: boolean;
   createdAt: string;
+  updatedAt?: string;
   sender: {
     id: string;
     name: string;

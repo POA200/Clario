@@ -7,9 +7,33 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET ||
+    "clario-jwt-secret-key-2026",
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 365 * 24 * 60 * 60, // 365 days persistent session
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production" &&
+        process.env.NEXTAUTH_URL?.startsWith("https")
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure:
+          process.env.NODE_ENV === "production" &&
+          process.env.NEXTAUTH_URL?.startsWith("https"),
+        maxAge: 365 * 24 * 60 * 60,
+      },
+    },
+  },
   pages: { signIn: "/login" },
 
   callbacks: {
@@ -17,13 +41,16 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
       }
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+      }
 
       return token;
     },
 
     async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
+      if (session.user) {
+        session.user.id = (token.id as string) || (token.sub as string) || "";
       }
 
       return session;

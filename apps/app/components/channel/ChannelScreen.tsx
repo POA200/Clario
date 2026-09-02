@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -12,6 +13,7 @@ import {
   Info,
   MessageCircle,
   MoreVertical,
+  Pencil,
   Search,
   Send,
   Trash2,
@@ -88,6 +90,7 @@ type ChannelScreenProps = {
 
 export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   const router = useRouter();
+  const [channelState, setChannelState] = useState<ChannelDetail>(channel);
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -106,6 +109,13 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   const [isDeletingChannel, setIsDeletingChannel] = useState(false);
   const [deleteChannelError, setDeleteChannelError] = useState("");
 
+  // Edit Message States
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  // Delete Message States
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
 
@@ -338,6 +348,77 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
     }
   }
 
+  function handleStartEdit(message: ChannelMessage) {
+    setEditingMessageId(message.id);
+    setEditingContent(message.content);
+    setEditError("");
+  }
+
+  function handleCancelEdit() {
+    setEditingMessageId(null);
+    setEditingContent("");
+    setEditError("");
+  }
+
+  async function handleSaveEdit(messageId: string) {
+    if (!editingContent.trim()) {
+      setEditError("Message content cannot be empty.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError("");
+
+    const updatedContent = editingContent.trim();
+    // Optimistic update
+    setMessages((current) =>
+      current.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              content: updatedContent,
+              updatedAt: new Date().toISOString(),
+            }
+          : m,
+      ),
+    );
+
+    try {
+      const response = await fetch(
+        `/api/teams/${channel.teamId}/channels/${channel.id}/messages`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messageId,
+            content: updatedContent,
+          }),
+        },
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        setEditError(data?.error || "Failed to update message.");
+        fetchMessages();
+        return;
+      }
+
+      if (data?.message) {
+        setMessages((current) =>
+          current.map((m) => (m.id === messageId ? data.message : m)),
+        );
+      }
+
+      setEditingMessageId(null);
+      setEditingContent("");
+    } catch {
+      setEditError("Network error updating message.");
+      fetchMessages();
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   async function handleDeleteChannel() {
     setIsDeletingChannel(true);
     setDeleteChannelError("");
@@ -421,15 +502,27 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             <ArrowLeft className="size-5" strokeWidth={2} />
           </Link>
 
-          <MessageCircle
-            className="size-5 shrink-0 text-muted-foreground"
-            strokeWidth={1.8}
-          />
+          {channelState.image ? (
+            <img
+              src={channelState.image}
+              alt=""
+              className="size-7 shrink-0 rounded-lg object-cover border border-border"
+            />
+          ) : channelState.icon && channelState.icon.length <= 4 ? (
+            <span className="text-xl shrink-0 leading-none">
+              {channelState.icon}
+            </span>
+          ) : (
+            <MessageCircle
+              className="size-5 shrink-0 text-muted-foreground"
+              strokeWidth={1.8}
+            />
+          )}
 
           <span className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
 
           <h1 className="min-w-0 truncate text-lg font-bold text-foreground md:text-xl">
-            {channel.name}
+            {channelState.name}
           </h1>
 
           {/* Stacked member avatars */}
@@ -476,7 +569,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             </button>
 
             {showOptionsMenu && (
-              <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
                 <button
                   type="button"
                   onClick={() => {
@@ -540,8 +633,9 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
             {messages.map((message) => {
               const styles = MESSAGE_STYLES[message.type];
               const senderColor = getSenderColor(message.sender.id, senderIds);
-              const canDelete =
-                currentUser?.id === message.sender.id || channel.isAdmin;
+              const isAuthor = currentUser?.id === message.sender.id;
+              const canEdit = isAuthor;
+              const canDelete = isAuthor || channel.isAdmin;
               const initial = (
                 message.sender.username ??
                 message.sender.name ??
@@ -570,7 +664,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                   {/* Message content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-baseline gap-2 flex-wrap">
                         <span
                           className={`text-xs font-semibold ${senderColor}`}
                         >
@@ -579,64 +673,122 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                         <span className="text-[11px] text-muted-foreground">
                           {formatTimestamp(message.createdAt)}
                         </span>
+                        {message.updatedAt &&
+                          message.updatedAt !== message.createdAt && (
+                            <span className="text-[10px] text-muted-foreground italic">
+                              (edited)
+                            </span>
+                          )}
                       </div>
 
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => setMessageToDelete(message.id)}
-                          aria-label="Delete message"
-                          className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive text-muted-foreground p-1"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div
-                      className={`mt-1 rounded-xl border-l-4 p-3.5 shadow-2xs transition-colors ${styles.bg} ${styles.border}`}
-                    >
-                      {message.type === "TASK" && (
-                        <div className="mb-2 flex items-center justify-between border-b border-border/40 pb-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleToggleTask(message.id, message.completed)
-                            }
-                            className="flex items-center gap-2 text-xs font-semibold text-foreground hover:opacity-80"
-                          >
-                            {message.completed ? (
-                              <CheckCircle2 className="size-4 text-emerald-500" />
-                            ) : (
-                              <Circle className="size-4 text-muted-foreground" />
-                            )}
-                            <span
-                              className={
-                                message.completed
-                                  ? "line-through text-muted-foreground"
-                                  : "text-foreground"
-                              }
+                      {(canEdit || canDelete) && (
+                        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(message)}
+                              aria-label="Edit message"
+                              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                             >
-                              {message.completed
-                                ? "Task Completed"
-                                : "Mark as completed"}
-                            </span>
-                          </button>
-
-                          {message.deadline && (
-                            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                              Due: {formatDeadline(message.deadline)}
-                            </span>
+                              <Pencil className="size-3.5" />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => setMessageToDelete(message.id)}
+                              aria-label="Delete message"
+                              className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
                           )}
                         </div>
                       )}
-
-                      <p
-                        className={`text-sm text-foreground whitespace-pre-wrap break-words ${message.type === "TASK" && message.completed ? "line-through text-muted-foreground" : ""}`}
-                      >
-                        {message.content}
-                      </p>
                     </div>
+
+                    {editingMessageId === message.id ? (
+                      <div className="mt-2 space-y-2 rounded-xl border border-primary/40 bg-card p-3 shadow-md">
+                        <textarea
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          className="w-full resize-none rounded-lg border border-border bg-background p-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          rows={3}
+                          autoFocus
+                          disabled={isSavingEdit}
+                        />
+                        {editError && (
+                          <p className="text-xs text-destructive">
+                            {editError}
+                          </p>
+                        )}
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            disabled={isSavingEdit}
+                            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            <X className="size-3.5" />
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(message.id)}
+                            disabled={isSavingEdit || !editingContent.trim()}
+                            className="flex items-center gap-1 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                          >
+                            <Check className="size-3.5" />
+                            {isSavingEdit ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`mt-1 rounded-xl border-l-4 p-3.5 shadow-2xs transition-colors ${styles.bg} ${styles.border}`}
+                      >
+                        {message.type === "TASK" && (
+                          <div className="mb-2 flex items-center justify-between border-b border-border/40 pb-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleToggleTask(message.id, message.completed)
+                              }
+                              className="flex items-center gap-2 text-xs font-semibold text-foreground hover:opacity-80"
+                            >
+                              {message.completed ? (
+                                <CheckCircle2 className="size-4 text-emerald-500" />
+                              ) : (
+                                <Circle className="size-4 text-muted-foreground" />
+                              )}
+                              <span
+                                className={
+                                  message.completed
+                                    ? "line-through text-muted-foreground"
+                                    : "text-foreground"
+                                }
+                              >
+                                {message.completed
+                                  ? "Task Completed"
+                                  : "Mark as completed"}
+                              </span>
+                            </button>
+
+                            {message.deadline && (
+                              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                Due: {formatDeadline(message.deadline)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <p
+                          className={`text-sm text-foreground whitespace-pre-wrap break-words ${message.type === "TASK" && message.completed ? "line-through text-muted-foreground" : ""}`}
+                        >
+                          {message.content}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

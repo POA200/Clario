@@ -82,9 +82,8 @@ export async function POST(
       typeof body.name === "string" ? body.name.trim() : "";
 
     const icon =
-      typeof body.icon === "string" &&
-      VALID_ICONS.includes(body.icon as (typeof VALID_ICONS)[number])
-        ? body.icon
+      typeof body.icon === "string" && body.icon.trim()
+        ? body.icon.trim().slice(0, 30)
         : "messages";
 
     if (!name) {

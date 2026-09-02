@@ -318,3 +318,103 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request, { params }: RouteContext) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { teamId, channelId } = await params;
+    const body = await request.json().catch(() => ({}));
+    const messageId = body.messageId as string | undefined;
+    const newContent = body.content as string | undefined;
+
+    if (!messageId || typeof newContent !== "string" || !newContent.trim()) {
+      return NextResponse.json(
+        { error: "Message ID and content are required" },
+        { status: 400 },
+      );
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      include: {
+        sender: {
+          select: { id: true, name: true, username: true, image: true },
+        },
+      },
+    });
+
+    if (!message || message.channelId !== channelId || message.deletedAt) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+
+    const membership = await prisma.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: session.user.id,
+          teamId,
+        },
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Only the message author can edit their own message (admins cannot edit others' messages)
+    if (message.senderId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Only the author can edit this message" },
+        { status: 403 },
+      );
+    }
+
+    const updated = await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        content: newContent.trim(),
+        updatedAt: new Date(),
+      },
+      include: {
+        sender: {
+          select: { id: true, name: true, username: true, image: true },
+        },
+      },
+    });
+
+    // If it's a TASK, sync the updated title to the task
+    if (message.type === "TASK") {
+      await prisma.task
+        .updateMany({
+          where: { id: messageId },
+          data: { title: newContent.trim() },
+        })
+        .catch(() => {});
+    }
+
+    return NextResponse.json({
+      message: {
+        id: updated.id,
+        content: updated.content,
+        type: updated.type,
+        deadline: updated.deadline?.toISOString() ?? undefined,
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
+        sender: {
+          id: updated.sender.id,
+          name: updated.sender.username
+            ? `@${updated.sender.username}`
+            : updated.sender.name ?? "Unknown",
+          username: updated.sender.username ?? undefined,
+          image: updated.sender.image ?? undefined,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error editing message:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}

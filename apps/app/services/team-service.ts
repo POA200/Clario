@@ -15,16 +15,13 @@ function mapChannel(
     id: string;
     name: string;
     icon: string;
+    image?: string | null;
     channelReads?: { lastReadAt: Date }[];
     messages?: { id: string; senderId: string; createdAt: Date }[];
   },
   userId?: string,
 ): TeamChannel {
-  const icon = VALID_CHANNEL_ICONS.includes(
-    channel.icon as (typeof VALID_CHANNEL_ICONS)[number],
-  )
-    ? (channel.icon as TeamChannel["icon"])
-    : "messages";
+  const icon = channel.icon || "messages";
 
   let unread = false;
   if (channel.messages && channel.messages.length > 0) {
@@ -45,6 +42,7 @@ function mapChannel(
     id: channel.id,
     name: channel.name,
     icon,
+    image: channel.image ?? null,
     unread,
   };
 }
@@ -95,6 +93,7 @@ export async function getUserTeams(userId: string): Promise<Team[]> {
     return teams.map((team) => ({
       id: team.id,
       name: team.name,
+      avatar: team.avatar ?? undefined,
       memberCount: team.members.length,
       members: team.members.map((member) => ({
         id: member.id,
@@ -169,6 +168,7 @@ export async function getTeam(
   return {
     id: team.id,
     name: team.name,
+    avatar: team.avatar ?? undefined,
     memberCount: team.members.length,
     members: team.members.map((member) => ({
       id: member.id,
@@ -215,7 +215,7 @@ export async function getTeamChannels(
 
     return channels.map((channel) => mapChannel(channel, userId));
   } catch (error) {
-    console.error("[Team Service] Error fetching team channels:", error);
+    console.error("Error fetching team channels:", error);
     return [];
   }
 }
@@ -251,6 +251,7 @@ export type ChannelDetail = {
   id: string;
   name: string;
   icon: string;
+  image?: string | null;
   teamId: string;
   teamName: string;
   isAdmin: boolean;
@@ -309,6 +310,7 @@ export async function getChannel(
     id: channel.id,
     name: channel.name,
     icon: channel.icon,
+    image: channel.image ?? null,
     teamId: team.id,
     teamName: team.name,
     isAdmin,
@@ -341,6 +343,7 @@ export type TeamInfoTask = {
 export type TeamInfo = {
   id: string;
   name: string;
+  avatar?: string;
   createdAt: string;
   memberCount: number;
   isAdmin: boolean;
@@ -392,6 +395,7 @@ export async function getTeamInfo(
   return {
     id: team.id,
     name: team.name,
+    avatar: team.avatar ?? undefined,
     createdAt: team.createdAt.toISOString(),
     memberCount: team.members.length,
     isAdmin,

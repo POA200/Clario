@@ -2,40 +2,59 @@
 
 import Link from "next/link";
 import {
+  Camera,
   Check,
+  Code,
   Copy,
   Hash,
   Megaphone,
   Palette,
+  Pencil,
   Plus,
   Search,
-  Users,
-  Code,
-  X,
+  Upload,
   UserPlus,
+  Users,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { Input } from "@/components/ui/input";
 import { rememberTeam } from "@/services/team-navigation";
 import type { Team, TeamChannel } from "@/types/team";
 
-const CHANNEL_ICONS: Record<TeamChannel["icon"], typeof Hash> = {
+const CHANNEL_ICONS: Record<string, typeof Hash> = {
   messages: Hash,
   announcement: Megaphone,
   design: Palette,
   development: Code,
 };
 
-const CHANNEL_ICON_OPTIONS: {
-  value: TeamChannel["icon"];
-  label: string;
-}[] = [
+const CHANNEL_ICON_OPTIONS = [
   { value: "messages", label: "Messages" },
   { value: "announcement", label: "Announcement" },
   { value: "design", label: "Design" },
   { value: "development", label: "Development" },
+];
+
+const POPULAR_EMOJIS = [
+  "🚀",
+  "🔥",
+  "💡",
+  "🎯",
+  "💬",
+  "⚡",
+  "🌟",
+  "📢",
+  "🛠️",
+  "📊",
+  "🎨",
+  "🔒",
+  "💻",
+  "🎉",
+  "📈",
+  "❤️",
 ];
 
 type TeamScreenProps = {
@@ -43,13 +62,14 @@ type TeamScreenProps = {
 };
 
 export function TeamScreen({ team }: TeamScreenProps) {
+  const [teamState, setTeamState] = useState<Team>(team);
   const [query, setQuery] = useState("");
   const [channels, setChannels] = useState(team.channels);
 
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [channelName, setChannelName] = useState("");
-  const [channelIcon, setChannelIcon] =
-    useState<TeamChannel["icon"]>("messages");
+  const [channelIcon, setChannelIcon] = useState<string>("messages");
+  const [customEmojiInput, setCustomEmojiInput] = useState("");
 
   const [isCreating, setIsCreating] = useState(false);
   const [channelError, setChannelError] = useState("");
@@ -60,6 +80,16 @@ export function TeamScreen({ team }: TeamScreenProps) {
   const [inviteSuccess, setInviteSuccess] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Team Edit States
+  const [showEditTeamModal, setShowEditTeamModal] = useState(false);
+  const [editTeamName, setEditTeamName] = useState(team.name);
+  const [editTeamAvatar, setEditTeamAvatar] = useState<string | null>(
+    team.avatar ?? null,
+  );
+  const [teamAvatarError, setTeamAvatarError] = useState("");
+  const [isUpdatingTeam, setIsUpdatingTeam] = useState(false);
+  const teamImageInputRef = useRef<HTMLInputElement>(null);
 
   const filteredChannels = useMemo(
     () =>
@@ -271,21 +301,114 @@ export function TeamScreen({ team }: TeamScreenProps) {
     }
   }
 
+  function handleTeamAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setTeamAvatarError("");
+    const MAX_SIZE = 100 * 1024; // 100KB
+
+    if (file.size > MAX_SIZE) {
+      setTeamAvatarError("Image size must be 100KB or smaller.");
+      if (teamImageInputRef.current) teamImageInputRef.current.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setEditTeamAvatar(result);
+    };
+    reader.onerror = () => {
+      setTeamAvatarError("Failed to read image file.");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSaveTeamProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTeamName.trim()) {
+      setTeamAvatarError("Team name cannot be empty.");
+      return;
+    }
+
+    setIsUpdatingTeam(true);
+    setTeamAvatarError("");
+
+    try {
+      const response = await fetch(`/api/teams/${team.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editTeamName.trim(),
+          avatar: editTeamAvatar,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setTeamAvatarError(data?.error || "Failed to update team profile.");
+        setIsUpdatingTeam(false);
+        return;
+      }
+
+      if (data?.team) {
+        setTeamState((prev) => ({
+          ...prev,
+          name: data.team.name,
+          avatar: data.team.avatar,
+        }));
+      }
+
+      setShowEditTeamModal(false);
+    } catch {
+      setTeamAvatarError("Network error updating team profile.");
+    } finally {
+      setIsUpdatingTeam(false);
+    }
+  }
+
   return (
     <div className="min-h-dvh bg-background">
-      {" "}
       <DesktopSidebar />
       <main className="min-h-dvh ml-20 px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6">
         <section className="min-h-[calc(100dvh-24px)] rounded-[20px] bg-dashboard-surface px-4 py-5 md:min-h-[calc(100dvh-60px)] md:rounded-[24px] md:px-6 md:py-7 lg:px-6">
           {/* Team header */}
-          <header className="flex items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background text-lg font-semibold text-primary md:h-10 md:w-10">
-              {team.name.charAt(0)}
+          <header className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              {teamState.avatar ? (
+                <img
+                  src={teamState.avatar}
+                  alt={teamState.name}
+                  className="size-11 shrink-0 rounded-xl object-cover border border-border md:size-12 shadow-sm"
+                />
+              ) : (
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl font-bold text-primary md:size-12 border border-primary/20">
+                  {teamState.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <h1 className="truncate text-[20px] font-semibold tracking-tight text-foreground md:text-[28px]">
+                  {teamState.name}
+                </h1>
+              </div>
             </div>
 
-            <h1 className="min-w-0 truncate text-[20px] font-semibold tracking-tight text-foreground md:text-[30px]">
-              {team.name}
-            </h1>
+            <button
+              type="button"
+              onClick={() => {
+                setEditTeamName(teamState.name);
+                setEditTeamAvatar(teamState.avatar ?? null);
+                setTeamAvatarError("");
+                setShowEditTeamModal(true);
+              }}
+              aria-label="Team settings"
+              className="flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Camera className="size-4 text-muted-foreground" />
+              <span className="hidden sm:inline">Edit Team</span>
+            </button>
           </header>
 
           {/* Search + create button */}
@@ -352,7 +475,7 @@ export function TeamScreen({ team }: TeamScreenProps) {
 
             <div className="mt-6 space-y-4 md:mt-7 md:space-y-5">
               {filteredChannels.map((channel) => {
-                const ChannelIcon = CHANNEL_ICONS[channel.icon];
+                const IconComponent = CHANNEL_ICONS[channel.icon];
 
                 return (
                   <Link
@@ -364,15 +487,27 @@ export function TeamScreen({ team }: TeamScreenProps) {
                         : "text-foreground/50 font-normal"
                     }`}
                   >
-                    <ChannelIcon
-                      className={`size-5 shrink-0 md:size-5 ${
-                        channel.unread
-                          ? "text-foreground"
-                          : "text-foreground/80"
-                      }`}
-                      strokeWidth={channel.unread ? 2.2 : 1.8}
-                      aria-hidden="true"
-                    />
+                    {channel.image ? (
+                      <img
+                        src={channel.image}
+                        alt=""
+                        className="size-5 shrink-0 rounded-md object-cover md:size-6"
+                      />
+                    ) : IconComponent ? (
+                      <IconComponent
+                        className={`size-5 shrink-0 md:size-5 ${
+                          channel.unread
+                            ? "text-foreground"
+                            : "text-foreground/80"
+                        }`}
+                        strokeWidth={channel.unread ? 2.2 : 1.8}
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <span className="text-lg shrink-0 leading-none md:text-xl">
+                        {channel.icon || "💬"}
+                      </span>
+                    )}
 
                     <span
                       className={`h-7 w-px shrink-0 ${
@@ -494,11 +629,24 @@ export function TeamScreen({ team }: TeamScreenProps) {
                 </div>
               </div>
 
-              <div>
-                <span className="mb-2 block text-sm font-medium text-foreground">
-                  Channel icon
-                </span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="block text-sm font-medium text-foreground">
+                    Channel icon or emoji
+                  </span>
+                  {channelIcon && (
+                    <span className="text-xs font-medium text-primary">
+                      Selected:{" "}
+                      {CHANNEL_ICONS[channelIcon] ? (
+                        <span className="capitalize">{channelIcon}</span>
+                      ) : (
+                        <span className="text-sm">{channelIcon}</span>
+                      )}
+                    </span>
+                  )}
+                </div>
 
+                {/* Default System Icons */}
                 <div className="grid grid-cols-2 gap-2">
                   {CHANNEL_ICON_OPTIONS.map((option) => {
                     const Icon = CHANNEL_ICONS[option.value];
@@ -509,19 +657,69 @@ export function TeamScreen({ team }: TeamScreenProps) {
                         key={option.value}
                         type="button"
                         disabled={isCreating}
-                        onClick={() => setChannelIcon(option.value)}
-                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+                        onClick={() => {
+                          setChannelIcon(option.value);
+                          setCustomEmojiInput("");
+                        }}
+                        className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors ${
                           selected
-                            ? "border-primary bg-primary/10 text-primary"
+                            ? "border-primary bg-primary/10 text-primary font-semibold"
                             : "border-border bg-background text-foreground hover:bg-muted"
                         } disabled:cursor-not-allowed disabled:opacity-50`}
                       >
-                        <Icon className="size-5 shrink-0" strokeWidth={1.8} />
-
-                        <span>{option.label}</span>
+                        <Icon className="size-4 shrink-0" strokeWidth={1.8} />
+                        <span className="text-xs">{option.label}</span>
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Quick Emoji Pickers */}
+                <div className="pt-1">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Or select an emoji
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 rounded-xl border border-border/60 bg-background/50 p-2">
+                    {POPULAR_EMOJIS.map((emoji) => {
+                      const selected = channelIcon === emoji;
+                      return (
+                        <button
+                          key={emoji}
+                          type="button"
+                          disabled={isCreating}
+                          onClick={() => {
+                            setChannelIcon(emoji);
+                            setCustomEmojiInput(emoji);
+                          }}
+                          className={`flex size-9 items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 ${
+                            selected
+                              ? "bg-primary/20 ring-2 ring-primary"
+                              : "hover:bg-muted"
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Emoji Input */}
+                <div className="pt-1">
+                  <Input
+                    value={customEmojiInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomEmojiInput(val);
+                      if (val.trim()) {
+                        setChannelIcon(val.trim());
+                      }
+                    }}
+                    placeholder="Type or paste any custom emoji..."
+                    maxLength={10}
+                    disabled={isCreating}
+                    className="h-9 rounded-lg text-xs"
+                  />
                 </div>
               </div>
 
@@ -675,6 +873,154 @@ export function TeamScreen({ team }: TeamScreenProps) {
                   className="flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isInviting ? "Creating..." : "Create Invite"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Team Settings Modal */}
+      {showEditTeamModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !isUpdatingTeam) {
+              setShowEditTeamModal(false);
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-primary">
+                <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+                  <Camera className="size-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">
+                    Team Settings
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Update team profile image and name
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isUpdatingTeam}
+                onClick={() => setShowEditTeamModal(false)}
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTeamProfile} className="space-y-4">
+              {/* Team Avatar Upload */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Team Profile Photo (Max 100KB)
+                </label>
+                <div className="flex items-center gap-4">
+                  {editTeamAvatar ? (
+                    <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl border border-border shadow-sm">
+                      <img
+                        src={editTeamAvatar}
+                        alt="Team profile preview"
+                        className="size-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/50 text-muted-foreground">
+                      <Camera className="size-6 opacity-60" />
+                    </div>
+                  )}
+
+                  <div className="flex-1 space-y-1.5">
+                    <input
+                      ref={teamImageInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={handleTeamAvatarUpload}
+                      className="hidden"
+                      id="team-avatar-upload"
+                      disabled={isUpdatingTeam}
+                    />
+                    <div className="flex gap-2">
+                      <label
+                        htmlFor="team-avatar-upload"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Upload className="size-3.5" />
+                        <span>Upload Photo</span>
+                      </label>
+                      {editTeamAvatar && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditTeamAvatar(null);
+                            if (teamImageInputRef.current) {
+                              teamImageInputRef.current.value = "";
+                            }
+                          }}
+                          className="rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Select a photo from your device (PNG, JPG, WebP ≤100KB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Team Name */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="edit-team-name"
+                  className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
+                  Team Name
+                </label>
+                <Input
+                  id="edit-team-name"
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  placeholder="Team Name"
+                  maxLength={50}
+                  disabled={isUpdatingTeam}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+
+              {teamAvatarError && (
+                <div
+                  role="alert"
+                  className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive"
+                >
+                  {teamAvatarError}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  disabled={isUpdatingTeam}
+                  onClick={() => setShowEditTeamModal(false)}
+                  className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingTeam || !editTeamName.trim()}
+                  className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  <Check className="size-4" />
+                  <span>{isUpdatingTeam ? "Saving..." : "Save Changes"}</span>
                 </button>
               </div>
             </form>

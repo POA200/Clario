@@ -301,6 +301,31 @@ export function TeamInfoScreen({
           <ArrowLeft className="size-5" strokeWidth={2} />
         </Link>
 
+        {/* Team Header */}
+        <div className="mb-6 flex items-center gap-3.5">
+          {teamInfo.avatar ? (
+            <img
+              src={teamInfo.avatar}
+              alt={teamInfo.name}
+              className="size-12 shrink-0 rounded-2xl object-cover border border-border shadow-sm"
+            />
+          ) : (
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xl font-bold text-primary border border-primary/20">
+              {teamInfo.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <h1 className="text-xl font-bold text-foreground">
+              {teamInfo.name}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {teamInfo.memberCount}{" "}
+              {teamInfo.memberCount === 1 ? "member" : "members"} • Created{" "}
+              {formatCreatedDate(teamInfo.createdAt)}
+            </p>
+          </div>
+        </div>
+
         {/* Tab bar */}
         <div className="flex gap-3">
           <button
