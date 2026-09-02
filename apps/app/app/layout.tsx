@@ -6,6 +6,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -100,6 +101,7 @@ export default function RootLayout({
           <OfflineIndicator />
           <InstallPrompt />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
