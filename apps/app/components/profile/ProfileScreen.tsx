@@ -16,6 +16,8 @@ import {
 import { useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordValidityIndicator } from "@/components/ui/password-validity";
 import type { UserProfile } from "@/services/user-service";
 
 type ProfileScreenProps = {
@@ -372,15 +374,19 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
                 >
                   Password
                 </label>
-                <Input
+                <PasswordInput
                   id="password-input"
-                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="************"
                   className="h-12 rounded-xl border border-input bg-background px-4 text-base text-foreground"
                 />
               </div>
+
+              {/* Real-time Password Validity Feedback when typing a new password */}
+              {password.length > 0 && (
+                <PasswordValidityIndicator password={password} minLength={6} />
+              )}
             </div>
 
             <button

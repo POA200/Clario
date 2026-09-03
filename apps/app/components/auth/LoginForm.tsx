@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function LoginForm() {
   const router = useRouter();
@@ -86,10 +87,9 @@ export function LoginForm() {
       </div>
 
       <div>
-        <Input
+        <PasswordInput
           aria-label="Password"
           id="password"
-          type="password"
           placeholder="Password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}

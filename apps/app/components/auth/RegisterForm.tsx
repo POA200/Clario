@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordValidityIndicator } from "@/components/ui/password-validity";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -21,26 +23,36 @@ export function RegisterForm() {
     event.preventDefault();
     setError("");
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
     setIsSubmitting(true);
-    const response = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, username, email, password }),
-    });
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, username, email, password }),
+      });
 
-    const result = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setError(result.error ?? "Unable to create your account.");
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(result.error ?? "Unable to create your account.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push("/login?registered=1");
+    } catch {
+      setError("Network error creating account. Please try again.");
       setIsSubmitting(false);
-      return;
     }
-
-    router.push("/login?registered=1");
   }
 
   return (
@@ -84,11 +96,10 @@ export function RegisterForm() {
         />
       </div>
 
-      <div>
-        <Input
+      <div className="space-y-2">
+        <PasswordInput
           aria-label="Password"
           id="register-password"
-          type="password"
           placeholder="Password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
@@ -98,11 +109,10 @@ export function RegisterForm() {
         />
       </div>
 
-      <div>
-        <Input
+      <div className="space-y-2">
+        <PasswordInput
           aria-label="Confirm Password"
           id="confirm-password"
-          type="password"
           placeholder="Confirm Password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
@@ -111,6 +121,16 @@ export function RegisterForm() {
           required
         />
       </div>
+
+      {/* Real-time Password Validity Feedback */}
+      {(password.length > 0 || confirmPassword.length > 0) && (
+        <PasswordValidityIndicator
+          password={password}
+          confirmPassword={confirmPassword}
+          minLength={8}
+          showMatch={true}
+        />
+      )}
 
       <Button
         type="submit"

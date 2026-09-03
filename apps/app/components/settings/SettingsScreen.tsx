@@ -21,6 +21,8 @@ import {
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordValidityIndicator } from "@/components/ui/password-validity";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import type { UserSettings } from "@/services/settings-service";
 
@@ -573,9 +575,8 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
                 >
                   Current Password
                 </label>
-                <Input
+                <PasswordInput
                   id="curr-pwd"
-                  type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="************"
@@ -590,9 +591,8 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
                 >
                   New Password
                 </label>
-                <Input
+                <PasswordInput
                   id="new-pwd"
-                  type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="************"
@@ -607,15 +607,24 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
                 >
                   Confirm New Password
                 </label>
-                <Input
+                <PasswordInput
                   id="confirm-pwd"
-                  type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="************"
                   className="h-12 rounded-xl border border-input bg-background px-4 text-base"
                 />
               </div>
+
+              {/* Real-time Password Validity Feedback */}
+              {(newPassword.length > 0 || confirmPassword.length > 0) && (
+                <PasswordValidityIndicator
+                  password={newPassword}
+                  confirmPassword={confirmPassword}
+                  minLength={6}
+                  showMatch={true}
+                />
+              )}
 
               <button
                 type="submit"
