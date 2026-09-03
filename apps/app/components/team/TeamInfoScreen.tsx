@@ -724,22 +724,31 @@ function MembersTab({ members, searchQuery }: MembersTabProps) {
         return (
           <div key={member.id} className="flex items-center gap-4">
             {/* Avatar */}
-            {member.image ? (
-              <img
-                src={member.image}
-                alt=""
-                className="size-10 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                {initial}
-              </div>
-            )}
+            <Link
+              href={`/profile/${member.userId}`}
+              aria-label={`View ${member.name}'s profile`}
+              className="shrink-0 transition-transform hover:scale-105"
+            >
+              {member.image ? (
+                <img
+                  src={member.image}
+                  alt=""
+                  className="size-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                  {initial}
+                </div>
+              )}
+            </Link>
 
             {/* Name */}
-            <span className="min-w-0 flex-1 truncate text-base font-semibold text-foreground">
+            <Link
+              href={`/profile/${member.userId}`}
+              className="min-w-0 flex-1 truncate text-base font-semibold text-foreground hover:underline"
+            >
               {member.name}
-            </span>
+            </Link>
 
             {/* Presence */}
             <div className="flex shrink-0 items-center gap-1.5">

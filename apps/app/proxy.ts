@@ -12,6 +12,8 @@ export const config = {
     "/notifications/:path*",
     "/settings/:path*",
     "/profile/:path*",
+    "/dm/:path*",
+    "/chats/:path*",
   ],
 };
 

@@ -618,23 +618,26 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
 
           {/* Stacked member avatars */}
           <div className="ml-1 flex shrink-0 -space-x-2">
-            {headerMembers.map((member) =>
-              member.image ? (
-                <img
-                  key={member.id}
-                  src={member.image}
-                  alt=""
-                  className="size-7 rounded-full border-2 border-background object-cover"
-                />
-              ) : (
-                <div
-                  key={member.id}
-                  className="flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium text-muted-foreground"
-                >
-                  {member.name.charAt(0).toUpperCase()}
-                </div>
-              ),
-            )}
+            {headerMembers.map((member) => (
+              <Link
+                key={member.id}
+                href={`/profile/${member.id}`}
+                aria-label={`View ${member.name}'s profile`}
+                className="transition-transform hover:scale-110"
+              >
+                {member.image ? (
+                  <img
+                    src={member.image}
+                    alt=""
+                    className="size-7 rounded-full border-2 border-background object-cover"
+                  />
+                ) : (
+                  <div className="flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium text-muted-foreground">
+                    {member.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </Link>
+            ))}
           </div>
 
           <div
@@ -739,29 +742,36 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
               return (
                 <div key={message.id} className="group flex gap-3">
                   {/* Avatar */}
-                  {message.sender.image ? (
-                    <img
-                      src={message.sender.image}
-                      alt=""
-                      className="size-9 shrink-0 rounded-full border border-border object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {initial}
-                      </span>
-                    </div>
-                  )}
+                  <Link
+                    href={`/profile/${message.sender.id}`}
+                    aria-label={`View ${message.sender.name}'s profile`}
+                    className="shrink-0 transition-transform hover:scale-105"
+                  >
+                    {message.sender.image ? (
+                      <img
+                        src={message.sender.image}
+                        alt=""
+                        className="size-9 rounded-full border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-9 items-center justify-center rounded-full border border-border bg-muted">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {initial}
+                        </span>
+                      </div>
+                    )}
+                  </Link>
 
                   {/* Message content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <div className="flex items-baseline gap-2 flex-wrap">
-                        <span
-                          className={`text-xs font-semibold ${senderColor}`}
+                        <Link
+                          href={`/profile/${message.sender.id}`}
+                          className={`text-xs font-semibold hover:underline ${senderColor}`}
                         >
                           {message.sender.name}
-                        </span>
+                        </Link>
                         <span className="text-[11px] text-muted-foreground">
                           {formatTimestamp(message.createdAt)}
                         </span>

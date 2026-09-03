@@ -7,12 +7,11 @@ import { createNotification } from "@/services/notification-service";
 
 type RouteContext = {
   params: Promise<{
-    teamId: string;
-    channelId: string;
+    conversationId: string;
   }>;
 };
 
-export const ALLOWED_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"] as const;
+const ALLOWED_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"] as const;
 
 export async function POST(request: Request, { params }: RouteContext) {
   try {
@@ -21,30 +20,19 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { teamId, channelId } = await params;
+    const { conversationId } = await params;
 
-    const membership = await prisma.teamMember.findUnique({
+    const membership = await prisma.conversationMember.findUnique({
       where: {
-        userId_teamId: {
+        conversationId_userId: {
+          conversationId,
           userId: session.user.id,
-          teamId,
         },
       },
     });
 
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const channel = await prisma.channel.findFirst({
-      where: {
-        id: channelId,
-        teamId,
-      },
-    });
-
-    if (!channel) {
-      return NextResponse.json({ error: "Channel not found" }, { status: 404 });
     }
 
     const body = (await request.json().catch(() => ({}))) as {
@@ -65,11 +53,18 @@ export async function POST(request: Request, { params }: RouteContext) {
       where: { id: messageId },
     });
 
-    if (!message || message.channelId !== channelId || message.deletedAt) {
-      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    if (
+      !message ||
+      message.conversationId !== conversationId ||
+      message.deletedAt
+    ) {
+      return NextResponse.json(
+        { error: "Message not found" },
+        { status: 404 },
+      );
     }
 
-    // Check if user already reacted with this emoji
+    // Toggle reaction
     const existing = await prisma.messageReaction.findUnique({
       where: {
         messageId_userId_emoji: {
@@ -81,12 +76,10 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
 
     if (existing) {
-      // Toggle off / remove reaction
       await prisma.messageReaction.delete({
         where: { id: existing.id },
       });
     } else {
-      // Add reaction
       await prisma.messageReaction.create({
         data: {
           messageId,
@@ -98,36 +91,28 @@ export async function POST(request: Request, { params }: RouteContext) {
       // Notify message author if not reacting to own message
       if (message.senderId !== session.user.id) {
         try {
-          const [senderUser, channel] = await Promise.all([
-            prisma.user.findUnique({
-              where: { id: session.user.id },
-              select: { name: true, username: true },
-            }),
-            prisma.channel.findUnique({
-              where: { id: channelId },
-              select: { name: true },
-            }),
-          ]);
-
+          const senderUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { name: true, username: true },
+          });
           const reactorName =
             senderUser?.name ||
             (senderUser?.username ? `@${senderUser.username}` : "A teammate");
-          const channelName = channel?.name ? `#${channel.name}` : "the channel";
 
           await createNotification({
             userId: message.senderId,
             title: "New Reaction",
-            message: `${reactorName} reacted ${emoji} to your message in ${channelName}`,
+            message: `${reactorName} reacted ${emoji} to your direct message`,
             type: "MESSAGE",
-            link: `/teams/${teamId}/channels/${channelId}`,
+            link: `/dm/${session.user.id}`,
           });
         } catch (notifErr) {
-          console.error("[Channel Reaction API] Error creating notification:", notifErr);
+          console.error("[DM Reaction API] Error creating notification:", notifErr);
         }
       }
     }
 
-    // Fetch all current reactions for this message to return formatted summary
+    // Fetch all current reactions for this message
     const allReactions = await prisma.messageReaction.findMany({
       where: { messageId },
       select: { emoji: true, userId: true },
@@ -140,15 +125,17 @@ export async function POST(request: Request, { params }: RouteContext) {
       reactionMap.set(r.emoji, list);
     }
 
-    const reactions = Array.from(reactionMap.entries()).map(([em, userIds]) => ({
-      emoji: em,
-      count: userIds.length,
-      userIds,
-    }));
+    const reactions = Array.from(reactionMap.entries()).map(
+      ([em, userIds]) => ({
+        emoji: em,
+        count: userIds.length,
+        userIds,
+      }),
+    );
 
     return NextResponse.json({ success: true, reactions });
   } catch (error) {
-    console.error("Error toggling message reaction:", error);
+    console.error("[DM API] Error toggling reaction:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

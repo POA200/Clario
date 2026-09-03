@@ -12,6 +12,25 @@ export type UserProfile = {
   createdAt: string;
 };
 
+export type PublicUserProfile = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+  teams: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    role: string;
+  }[];
+  stats: {
+    teamsCount: number;
+    messagesCount: number;
+  };
+};
+
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   try {
     const user = await prisma.user.findUnique({
@@ -38,6 +57,75 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     };
   } catch (error) {
     console.error("[User Service] Error fetching profile:", error);
+    return null;
+  }
+}
+
+export async function getPublicUserProfile(
+  identifier: string,
+): Promise<PublicUserProfile | null> {
+  try {
+    let cleanId = identifier.trim();
+    if (cleanId.startsWith("@")) {
+      cleanId = cleanId.substring(1);
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: cleanId },
+          { username: { equals: cleanId, mode: "insensitive" } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        image: true,
+        createdAt: true,
+        lastSeenAt: true,
+        teams: {
+          select: {
+            role: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            messages: true,
+          },
+        },
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      image: user.image,
+      createdAt: user.createdAt.toISOString(),
+      lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
+      teams: user.teams.map((t) => ({
+        id: t.team.id,
+        name: t.team.name,
+        avatar: t.team.avatar,
+        role: t.role,
+      })),
+      stats: {
+        teamsCount: user.teams.length,
+        messagesCount: user._count.messages,
+      },
+    };
+  } catch (error) {
+    console.error("[User Service] Error fetching public profile:", error);
     return null;
   }
 }
