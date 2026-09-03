@@ -9,6 +9,7 @@ import {
   Bell,
   Check,
   ChevronRight,
+  Info,
   Lock,
   LogOut,
   Moon,
@@ -395,6 +396,29 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
               </span>
               <ChevronRight className="size-5 text-foreground" />
             </button>
+          </div>
+
+          {/* About Card */}
+          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-5 space-y-4">
+            <div className="flex items-center gap-2 text-base font-bold text-foreground">
+              <Info className="size-5" />
+              <span>About</span>
+            </div>
+
+            <Link
+              href="/about"
+              className="flex w-full items-center justify-between text-left transition-opacity hover:opacity-80"
+            >
+              <div className="space-y-0.5">
+                <span className="text-sm font-semibold text-foreground">
+                  About Clario
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  Version 1.0.0 • Terms & Privacy
+                </p>
+              </div>
+              <ChevronRight className="size-5 text-foreground shrink-0" />
+            </Link>
           </div>
 
           {/* Logout Button */}
