@@ -19,7 +19,11 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
+      try {
+        if (new URL(url).origin === new URL(baseUrl).origin) return url;
+      } catch {
+        // Fallback for relative or malformed URLs
+      }
       return `${baseUrl}/dashboard`;
     },
     async signIn({ user, account }) {

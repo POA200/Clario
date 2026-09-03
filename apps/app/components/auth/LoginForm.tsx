@@ -38,7 +38,9 @@ export function LoginForm() {
       }
 
       if (result.error) {
-        setError("Invalid email or password.");
+        setError(
+          "Invalid email or password. If you signed up with Google, please click 'Continue with Google'.",
+        );
         setIsSubmitting(false);
         return;
       }
