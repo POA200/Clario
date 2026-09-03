@@ -28,6 +28,12 @@ export type Team = {
 
 export type MessageType = "NORMAL" | "ANNOUNCEMENT" | "TASK";
 
+export type MessageReactionSummary = {
+  emoji: string;
+  count: number;
+  userIds: string[];
+};
+
 export type ChannelMessage = {
   id: string;
   content: string;
@@ -36,6 +42,7 @@ export type ChannelMessage = {
   completed?: boolean;
   createdAt: string;
   updatedAt?: string;
+  reactions?: MessageReactionSummary[];
   sender: {
     id: string;
     name: string;

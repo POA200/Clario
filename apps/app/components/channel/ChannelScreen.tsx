@@ -12,6 +12,7 @@ import {
   Circle,
   Info,
   MessageCircle,
+  MoreHorizontal,
   MoreVertical,
   Pencil,
   Search,
@@ -22,8 +23,19 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import type { ChannelMessage, MessageType } from "@/types/team";
+import type {
+  ChannelMessage,
+  MessageReactionSummary,
+  MessageType,
+} from "@/types/team";
 import type { ChannelDetail } from "@/services/team-service";
+
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"] as const;
+
+function isWithinOneHour(isoDate: string): boolean {
+  const ageMs = Date.now() - new Date(isoDate).getTime();
+  return ageMs <= 60 * 60 * 1000;
+}
 
 const MESSAGE_TYPE_OPTIONS: { value: MessageType; label: string }[] = [
   { value: "NORMAL", label: "Normal" },
@@ -119,9 +131,15 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
 
+  // Message Options & Reaction State
+  const [activeMenuMessageId, setActiveMenuMessageId] = useState<string | null>(
+    null,
+  );
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typeMenuRef = useRef<HTMLDivElement>(null);
   const optionsMenuRef = useRef<HTMLDivElement>(null);
+  const messageMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -211,14 +229,20 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
       ) {
         setShowOptionsMenu(false);
       }
+      if (
+        messageMenuRef.current &&
+        !messageMenuRef.current.contains(event.target as Node)
+      ) {
+        setActiveMenuMessageId(null);
+      }
     }
 
-    if (showTypeMenu || showOptionsMenu) {
+    if (showTypeMenu || showOptionsMenu || activeMenuMessageId) {
       document.addEventListener("mousedown", handleClick);
     }
 
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showTypeMenu, showOptionsMenu]);
+  }, [showTypeMenu, showOptionsMenu, activeMenuMessageId]);
 
   // Poll for new messages every 5s
   useEffect(() => {
@@ -416,6 +440,73 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
       fetchMessages();
     } finally {
       setIsSavingEdit(false);
+    }
+  }
+
+  async function handleToggleReaction(messageId: string, emoji: string) {
+    // Optimistic UI update
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        const currentReactions = msg.reactions ?? [];
+        const currentForEmoji = currentReactions.find((r) => r.emoji === emoji);
+        const userReacted = currentForEmoji?.userIds.includes(currentUser.id);
+
+        let nextReactions: MessageReactionSummary[];
+        if (userReacted) {
+          nextReactions = currentReactions
+            .map((r) =>
+              r.emoji === emoji
+                ? {
+                    ...r,
+                    count: r.count - 1,
+                    userIds: r.userIds.filter((id) => id !== currentUser.id),
+                  }
+                : r,
+            )
+            .filter((r) => r.count > 0);
+        } else {
+          if (currentForEmoji) {
+            nextReactions = currentReactions.map((r) =>
+              r.emoji === emoji
+                ? {
+                    ...r,
+                    count: r.count + 1,
+                    userIds: [...r.userIds, currentUser.id],
+                  }
+                : r,
+            );
+          } else {
+            nextReactions = [
+              ...currentReactions,
+              { emoji, count: 1, userIds: [currentUser.id] },
+            ];
+          }
+        }
+        return { ...msg, reactions: nextReactions };
+      }),
+    );
+
+    try {
+      const response = await fetch(
+        `/api/teams/${channel.teamId}/channels/${channel.id}/messages/reactions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId, emoji }),
+        },
+      );
+
+      const data = await response.json();
+      if (data?.reactions) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, reactions: data.reactions } : msg,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle reaction:", err);
     }
   }
 
@@ -634,8 +725,9 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
               const styles = MESSAGE_STYLES[message.type];
               const senderColor = getSenderColor(message.sender.id, senderIds);
               const isAuthor = currentUser?.id === message.sender.id;
-              const canEdit = isAuthor;
-              const canDelete = isAuthor || channel.isAdmin;
+              const isRecent = isWithinOneHour(message.createdAt);
+              const canEdit = isAuthor && isRecent;
+              const canDelete = (isAuthor && isRecent) || channel.isAdmin;
               const initial = (
                 message.sender.username ??
                 message.sender.name ??
@@ -681,30 +773,97 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                           )}
                       </div>
 
-                      {(canEdit || canDelete) && (
-                        <div className="flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-                          {canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(message)}
-                              aria-label="Edit message"
-                              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                            >
-                              <Pencil className="size-3.5" />
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              type="button"
-                              onClick={() => setMessageToDelete(message.id)}
-                              aria-label="Delete message"
-                              className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      {/* Three horizontal dots menu button */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveMenuMessageId(
+                              activeMenuMessageId === message.id
+                                ? null
+                                : message.id,
+                            )
+                          }
+                          aria-label="Message options"
+                          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground opacity-80 transition-all hover:bg-muted hover:text-foreground hover:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </button>
+
+                        {activeMenuMessageId === message.id && (
+                          <div
+                            ref={messageMenuRef}
+                            className="absolute right-0 top-full z-40 mt-1 w-56 rounded-2xl border border-border bg-background p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+                          >
+                            {/* 6 Main Emojis Reaction Bar */}
+                            <div className="mb-2 flex items-center justify-between rounded-xl bg-muted/60 p-1">
+                              {REACTION_EMOJIS.map((emoji) => {
+                                const currentReaction = message.reactions?.find(
+                                  (r) => r.emoji === emoji,
+                                );
+                                const hasReacted =
+                                  currentReaction?.userIds.includes(
+                                    currentUser.id,
+                                  );
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => {
+                                      handleToggleReaction(message.id, emoji);
+                                      setActiveMenuMessageId(null);
+                                    }}
+                                    aria-label={`React with ${emoji}`}
+                                    className={`flex size-7 items-center justify-center rounded-lg text-base transition-transform hover:scale-125 active:scale-95 ${
+                                      hasReacted
+                                        ? "bg-primary/20 ring-1 ring-primary"
+                                        : "hover:bg-background"
+                                    }`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            <div className="space-y-0.5">
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuMessageId(null);
+                                    handleStartEdit(message);
+                                  }}
+                                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                                >
+                                  <Pencil className="size-3.5 text-muted-foreground" />
+                                  <span>Edit Message</span>
+                                </button>
+                              )}
+
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuMessageId(null);
+                                    setMessageToDelete(message.id);
+                                  }}
+                                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                  <span>Delete Message</span>
+                                </button>
+                              )}
+
+                              {isAuthor && !isRecent && (
+                                <div className="px-2.5 py-1 text-[11px] text-muted-foreground italic">
+                                  Edit & delete expired (&gt;1 hr)
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {editingMessageId === message.id ? (
@@ -744,49 +903,87 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                         </div>
                       </div>
                     ) : (
-                      <div
-                        className={`mt-1 rounded-xl border-l-4 p-3.5 shadow-2xs transition-colors ${styles.bg} ${styles.border}`}
-                      >
-                        {message.type === "TASK" && (
-                          <div className="mb-2 flex items-center justify-between border-b border-border/40 pb-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleToggleTask(message.id, message.completed)
-                              }
-                              className="flex items-center gap-2 text-xs font-semibold text-foreground hover:opacity-80"
-                            >
-                              {message.completed ? (
-                                <CheckCircle2 className="size-4 text-emerald-500" />
-                              ) : (
-                                <Circle className="size-4 text-muted-foreground" />
-                              )}
-                              <span
-                                className={
-                                  message.completed
-                                    ? "line-through text-muted-foreground"
-                                    : "text-foreground"
+                      <div>
+                        <div
+                          className={`mt-1 rounded-xl border-l-4 p-3.5 shadow-2xs transition-colors ${styles.bg} ${styles.border}`}
+                        >
+                          {message.type === "TASK" && (
+                            <div className="mb-2 flex items-center justify-between border-b border-border/40 pb-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleTask(
+                                    message.id,
+                                    message.completed,
+                                  )
                                 }
+                                className="flex items-center gap-2 text-xs font-semibold text-foreground hover:opacity-80"
                               >
-                                {message.completed
-                                  ? "Task Completed"
-                                  : "Mark as completed"}
-                              </span>
-                            </button>
+                                {message.completed ? (
+                                  <CheckCircle2 className="size-4 text-emerald-500" />
+                                ) : (
+                                  <Circle className="size-4 text-muted-foreground" />
+                                )}
+                                <span
+                                  className={
+                                    message.completed
+                                      ? "line-through text-muted-foreground"
+                                      : "text-foreground"
+                                  }
+                                >
+                                  {message.completed
+                                    ? "Task Completed"
+                                    : "Mark as completed"}
+                                </span>
+                              </button>
 
-                            {message.deadline && (
-                              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                                Due: {formatDeadline(message.deadline)}
-                              </span>
-                            )}
+                              {message.deadline && (
+                                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                  Due: {formatDeadline(message.deadline)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          <p
+                            className={`text-sm text-foreground whitespace-pre-wrap break-words ${message.type === "TASK" && message.completed ? "line-through text-muted-foreground" : ""}`}
+                          >
+                            {message.content}
+                          </p>
+                        </div>
+
+                        {/* Reactions Pills */}
+                        {message.reactions && message.reactions.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {message.reactions.map((r) => {
+                              const hasReacted = r.userIds.includes(
+                                currentUser.id,
+                              );
+                              return (
+                                <button
+                                  key={r.emoji}
+                                  type="button"
+                                  onClick={() =>
+                                    handleToggleReaction(message.id, r.emoji)
+                                  }
+                                  aria-label={`Reaction ${r.emoji} count ${r.count}`}
+                                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs transition-all active:scale-95 ${
+                                    hasReacted
+                                      ? "border border-primary/50 bg-primary/15 font-semibold text-primary shadow-xs scale-105"
+                                      : "border border-border/80 bg-background/80 text-foreground/80 hover:bg-muted"
+                                  }`}
+                                >
+                                  <span className="text-sm leading-none">
+                                    {r.emoji}
+                                  </span>
+                                  <span className="text-[11px] font-bold">
+                                    {r.count}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
-
-                        <p
-                          className={`text-sm text-foreground whitespace-pre-wrap break-words ${message.type === "TASK" && message.completed ? "line-through text-muted-foreground" : ""}`}
-                        >
-                          {message.content}
-                        </p>
                       </div>
                     )}
                   </div>

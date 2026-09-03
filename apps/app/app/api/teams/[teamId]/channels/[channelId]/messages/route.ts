@@ -73,6 +73,12 @@ export async function GET(request: Request, { params }: RouteContext) {
               image: true,
             },
           },
+          reactions: {
+            select: {
+              emoji: true,
+              userId: true,
+            },
+          },
         },
       }),
       prisma.task.findMany({
@@ -84,21 +90,45 @@ export async function GET(request: Request, { params }: RouteContext) {
     const taskMap = new Map(tasks.map((t) => [t.id, t.completed]));
 
     return NextResponse.json({
-      messages: messages.map((m) => ({
-        id: m.id,
-        content: m.content,
-        type: m.type,
-        deadline: m.deadline?.toISOString() ?? undefined,
-        completed: m.type === "TASK" ? (taskMap.get(m.id) ?? false) : undefined,
-        createdAt: m.createdAt.toISOString(),
-        sender: {
-          id: m.sender.id,
-          name: m.sender.username ? `@${m.sender.username}` : (m.sender.name ?? "Unknown"),
-          username: m.sender.username ?? undefined,
-          image: m.sender.image ?? undefined,
-        },
-      })),
-      nextCursor: messages.length === limit ? messages[messages.length - 1]?.id : undefined,
+      messages: messages.map((m) => {
+        const reactionMap = new Map<string, string[]>();
+        for (const r of m.reactions) {
+          const list = reactionMap.get(r.emoji) || [];
+          list.push(r.userId);
+          reactionMap.set(r.emoji, list);
+        }
+        const reactions = Array.from(reactionMap.entries()).map(
+          ([emoji, userIds]) => ({
+            emoji,
+            count: userIds.length,
+            userIds,
+          }),
+        );
+
+        return {
+          id: m.id,
+          content: m.content,
+          type: m.type,
+          deadline: m.deadline?.toISOString() ?? undefined,
+          completed:
+            m.type === "TASK" ? (taskMap.get(m.id) ?? false) : undefined,
+          createdAt: m.createdAt.toISOString(),
+          updatedAt: m.updatedAt.toISOString(),
+          reactions,
+          sender: {
+            id: m.sender.id,
+            name: m.sender.username
+              ? `@${m.sender.username}`
+              : m.sender.name ?? "Unknown",
+            username: m.sender.username ?? undefined,
+            image: m.sender.image ?? undefined,
+          },
+        };
+      }),
+      nextCursor:
+        messages.length === limit
+          ? messages[messages.length - 1]?.id
+          : undefined,
     });
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -299,8 +329,18 @@ export async function DELETE(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const messageAge = Date.now() - new Date(message.createdAt).getTime();
+    const isWithin1Hour = messageAge <= 60 * 60 * 1000;
+
     if (message.senderId !== session.user.id && membership.role !== "ADMIN") {
       return NextResponse.json({ error: "Cannot delete this message" }, { status: 403 });
+    }
+
+    if (message.senderId === session.user.id && membership.role !== "ADMIN" && !isWithin1Hour) {
+      return NextResponse.json(
+        { error: "Messages can only be deleted within 1 hour of sending." },
+        { status: 403 },
+      );
     }
 
     await prisma.message.update({
@@ -364,10 +404,18 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Only the message author can edit their own message (admins cannot edit others' messages)
+    // Only the message author can edit their own message
     if (message.senderId !== session.user.id) {
       return NextResponse.json(
         { error: "Only the author can edit this message" },
+        { status: 403 },
+      );
+    }
+
+    const messageAge = Date.now() - new Date(message.createdAt).getTime();
+    if (messageAge > 60 * 60 * 1000) {
+      return NextResponse.json(
+        { error: "Messages can only be edited within 1 hour of sending." },
         { status: 403 },
       );
     }
