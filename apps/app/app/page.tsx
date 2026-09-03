@@ -1,29 +1,13 @@
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-
-import { ClarioLogo } from "@/components/common/ClarioLogo";
-import { buttonVariants } from "@/components/ui/button";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { cn } from "@/lib/utils";
+import { OnboardingScreen } from "@/components/onboarding/OnboardingScreen";
 
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
 
-  return (
-    <main className="min-h-dvh bg-background p-4">
-      <div className="relative flex min-h-[calc(100dvh-2rem)] items-center justify-center rounded-[24px] bg-primary">
-        <ClarioLogo inverse />
-        <Link
-          href={user?.id ? "/dashboard" : "/login"}
-          className={cn(
-            buttonVariants({ size: "lg" }),
-            "absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-white px-10 text-primary shadow-lg hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white dark:bg-white dark:text-primary dark:hover:bg-white/90",
-          )}
-        >
-          {user?.id ? "Continue to Dashboard" : "Continue to Clario"}
-          <ArrowRight className="ml-2 h-4 w-4 text-primary" />
-        </Link>
-      </div>
-    </main>
-  );
+  if (user?.id) {
+    redirect("/dashboard");
+  }
+
+  return <OnboardingScreen />;
 }
