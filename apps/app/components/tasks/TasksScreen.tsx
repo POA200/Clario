@@ -388,7 +388,7 @@ export function TasksScreen({ initialGroups }: TasksScreenProps) {
                             title: task.title,
                           });
                         }}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-emerald-800/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/task:opacity-100 dark:text-emerald-300/40"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-emerald-800/60 opacity-75 transition-all hover:bg-destructive/10 hover:text-destructive hover:opacity-100 md:opacity-0 md:group-hover/task:opacity-100 dark:text-emerald-300/60"
                       >
                         <Trash2 className="size-4" />
                       </button>
