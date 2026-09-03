@@ -5,7 +5,9 @@ import { Plus, Search, Users, X } from "lucide-react";
 import { useState } from "react";
 
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { useNavigation } from "@/components/navigation/NavigationProvider";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
 
 type DashboardScreenProps = {
@@ -13,6 +15,7 @@ type DashboardScreenProps = {
 };
 
 export function DashboardScreen({ teams: initialTeams }: DashboardScreenProps) {
+  const { mobileNav } = useNavigation();
   const [teams, setTeams] = useState(initialTeams);
   const [query, setQuery] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -96,7 +99,12 @@ export function DashboardScreen({ teams: initialTeams }: DashboardScreenProps) {
     <div className="min-h-dvh bg-background">
       <DesktopSidebar />
 
-      <main className="min-h-dvh ml-20 px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6">
+      <main
+        className={cn(
+          "min-h-dvh px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6",
+          mobileNav === "sidebar" ? "ml-20" : "ml-0 pb-24 md:pb-[30px]",
+        )}
+      >
         <section className="min-h-[calc(100dvh-24px)] rounded-[20px] bg-dashboard-surface px-4 py-5 md:min-h-[calc(100dvh-60px)] md:rounded-[24px] md:px-6 md:py-7 lg:px-6">
           <header className="flex items-center justify-between">
             <h1 className="text-[20px] font-semibold tracking-tight text-foreground md:text-[30px]">

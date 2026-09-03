@@ -14,6 +14,11 @@ import {
   Users,
 } from "lucide-react";
 
+import {
+  formatDisplayName,
+  formatDisplayUsername,
+  getDefaultUsername,
+} from "@/lib/utils";
 import type { PublicUserProfile } from "@/services/user-service";
 
 type PublicProfileScreenProps = {
@@ -40,7 +45,18 @@ export function PublicProfileScreen({
   const router = useRouter();
   const isSelf = currentUserId === profile.id;
 
-  const initial = (profile.username ?? profile.name ?? "?")
+  const displayName = formatDisplayName(
+    profile.name,
+    profile.username,
+    profile.id,
+  );
+  const displayUsername = formatDisplayUsername(profile.username, profile.id);
+  const initial = (
+    profile.username ??
+    profile.name ??
+    getDefaultUsername(profile.id)
+  )
+    .replace(/^@/, "")
     .charAt(0)
     .toUpperCase();
 
@@ -81,7 +97,7 @@ export function PublicProfileScreen({
             {profile.image ? (
               <img
                 src={profile.image}
-                alt={profile.name ?? profile.username ?? "User avatar"}
+                alt={displayName}
                 className="size-24 rounded-full object-cover border-4 border-background shadow-md"
               />
             ) : (
@@ -94,13 +110,11 @@ export function PublicProfileScreen({
           {/* Name & Username */}
           <div className="space-y-1">
             <h2 className="text-xl font-bold tracking-tight text-foreground">
-              {profile.name || "Teammate"}
+              {displayName}
             </h2>
-            {profile.username && (
-              <p className="inline-flex items-center rounded-full bg-[#2F1AC4]/10 dark:bg-primary/20 px-3 py-0.5 text-xs font-semibold text-[#2F1AC4] dark:text-primary">
-                @{profile.username}
-              </p>
-            )}
+            <p className="inline-flex items-center rounded-full bg-[#2F1AC4]/10 dark:bg-primary/20 px-3 py-0.5 text-xs font-semibold text-[#2F1AC4] dark:text-primary">
+              {displayUsername}
+            </p>
           </div>
 
           {/* Bio / Tagline */}

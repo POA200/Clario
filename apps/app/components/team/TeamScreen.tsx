@@ -20,7 +20,9 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { useNavigation } from "@/components/navigation/NavigationProvider";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { rememberTeam } from "@/services/team-navigation";
 import type { Team, TeamChannel } from "@/types/team";
 
@@ -62,6 +64,7 @@ type TeamScreenProps = {
 };
 
 export function TeamScreen({ team }: TeamScreenProps) {
+  const { mobileNav } = useNavigation();
   const [teamState, setTeamState] = useState<Team>(team);
   const [query, setQuery] = useState("");
   const [channels, setChannels] = useState(team.channels);
@@ -371,7 +374,12 @@ export function TeamScreen({ team }: TeamScreenProps) {
   return (
     <div className="min-h-dvh bg-background">
       <DesktopSidebar />
-      <main className="min-h-dvh ml-20 px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6">
+      <main
+        className={cn(
+          "min-h-dvh px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6",
+          mobileNav === "sidebar" ? "ml-20" : "ml-0 pb-24 md:pb-[30px]",
+        )}
+      >
         <section className="min-h-[calc(100dvh-24px)] rounded-[20px] bg-dashboard-surface px-4 py-5 md:min-h-[calc(100dvh-60px)] md:rounded-[24px] md:px-6 md:py-7 lg:px-6">
           {/* Team header */}
           <header className="flex items-center justify-between gap-4">

@@ -9,11 +9,14 @@ import {
   Bell,
   Check,
   ChevronRight,
+  Compass,
   Info,
   Lock,
   LogOut,
   Moon,
   Palette,
+  PanelBottom,
+  PanelLeft,
   Sun,
   Trash2,
   UserRound,
@@ -25,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordValidityIndicator } from "@/components/ui/password-validity";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { useNavigation } from "@/components/navigation/NavigationProvider";
+import { cn, formatDisplayName, formatDisplayUsername } from "@/lib/utils";
 import type { UserSettings } from "@/services/settings-service";
 
 type SwitchProps = {
@@ -82,6 +87,7 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
   );
 
   const { setTheme: globalSetTheme } = useTheme();
+  const { mobileNav, setMobileNav } = useNavigation();
 
   // Appearance states
   const [theme, setTheme] = useState(preferences.theme);
@@ -110,8 +116,8 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  const displayName = user.name || "Anonymous User";
-  const displayUsername = user.username ? `@${user.username}` : "@Anonymous";
+  const displayName = formatDisplayName(user.name, user.username, user.id);
+  const displayUsername = formatDisplayUsername(user.username, user.id);
 
   async function handleDeleteAccount() {
     setIsDeletingAccount(true);
@@ -376,6 +382,62 @@ export function SettingsScreen({ initialSettings }: SettingsScreenProps) {
                   <Sun className="size-5 text-foreground" />
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Navigation Card (Mobile only) */}
+          <div className="rounded-[24px] border border-[#D5CAFE]/60 bg-[#EAE6FE] dark:border-border dark:bg-dashboard-surface p-5 space-y-4 md:hidden">
+            <div className="flex items-center gap-2 text-base font-bold text-foreground">
+              <Compass className="size-5" />
+              <span>Navigation</span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm font-semibold text-foreground block">
+                  Mobile Navigation Style
+                </span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Choose between the classic sidebar and bottom navigation bar
+                  on mobile
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileNav("sidebar");
+                    showToast("Switched to Classic Sidebar");
+                  }}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-2 rounded-2xl border p-3.5 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-primary",
+                    mobileNav === "sidebar"
+                      ? "border-[#2F1AC4] bg-[#2F1AC4] text-white shadow-xs dark:border-primary dark:bg-primary"
+                      : "border-border bg-background/80 text-foreground hover:bg-background",
+                  )}
+                >
+                  <PanelLeft className="size-5" strokeWidth={2.2} />
+                  <span>Classic Sidebar</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileNav("bottom");
+                    showToast("Switched to Bottom Nav Bar");
+                  }}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-2 rounded-2xl border p-3.5 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-primary",
+                    mobileNav === "bottom"
+                      ? "border-[#2F1AC4] bg-[#2F1AC4] text-white shadow-xs dark:border-primary dark:bg-primary"
+                      : "border-border bg-background/80 text-foreground hover:bg-background",
+                  )}
+                >
+                  <PanelBottom className="size-5" strokeWidth={2.2} />
+                  <span>Bottom Nav Bar</span>
+                </button>
+              </div>
             </div>
           </div>
 

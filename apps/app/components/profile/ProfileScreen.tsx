@@ -18,6 +18,7 @@ import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordValidityIndicator } from "@/components/ui/password-validity";
+import { formatDisplayName, formatDisplayUsername } from "@/lib/utils";
 import type { UserProfile } from "@/services/user-service";
 
 type ProfileScreenProps = {
@@ -43,10 +44,12 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const displayName = profile.name || "Peter";
-  const displayUsername = profile.username
-    ? `@${profile.username}`
-    : "@iPeter_crx";
+  const displayName = formatDisplayName(
+    profile.name,
+    profile.username,
+    profile.id,
+  );
+  const displayUsername = formatDisplayUsername(profile.username, profile.id);
 
   const handleImageFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -328,7 +331,7 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
                   id="full-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Peter"
+                  placeholder="Full Name"
                   maxLength={80}
                   className="h-12 rounded-xl border border-input bg-background px-4 text-base text-foreground"
                 />
@@ -361,7 +364,7 @@ export function ProfileScreen({ initialProfile }: ProfileScreenProps) {
                   id="username-input"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="@iPeter_crx"
+                  placeholder="@username"
                   maxLength={30}
                   className="h-12 rounded-xl border border-input bg-background px-4 text-base text-foreground"
                 />

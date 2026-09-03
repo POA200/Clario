@@ -14,7 +14,9 @@ import {
 import { useState } from "react";
 
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { useNavigation } from "@/components/navigation/NavigationProvider";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { DMListItem, TeammateItem } from "@/services/dm-service";
 
 function isOnline(lastSeenAt?: string | null): boolean {
@@ -73,32 +75,33 @@ export function ChatsListScreen({
   teammates,
   currentUserId,
 }: ChatsListScreenProps) {
+  const { mobileNav } = useNavigation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState("");
 
+  // Filter conversations
   const filteredConversations = conversations.filter((conv) => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
-    const nameMatch = conv.recipient.name.toLowerCase().includes(query);
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = conv.recipient.name.toLowerCase().includes(q);
     const usernameMatch = conv.recipient.username
-      ? conv.recipient.username.toLowerCase().includes(query)
+      ? conv.recipient.username.toLowerCase().includes(q)
       : false;
-    const messageMatch = conv.lastMessage?.content
-      ? conv.lastMessage.content.toLowerCase().includes(query)
-      : false;
+    const messageMatch = conv.lastMessage?.content.toLowerCase().includes(q);
     return nameMatch || usernameMatch || messageMatch;
   });
 
+  // Filter teammates for the modal
   const filteredTeammates = teammates.filter((t) => {
-    const query = newChatSearch.toLowerCase().trim();
-    if (!query) return true;
-    const nameMatch = t.name.toLowerCase().includes(query);
+    const q = newChatSearch.toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = t.name.toLowerCase().includes(q);
     const usernameMatch = t.username
-      ? t.username.toLowerCase().includes(query)
+      ? t.username.toLowerCase().includes(q)
       : false;
-    const teamMatch = t.teamName.toLowerCase().includes(query);
+    const teamMatch = t.teamName.toLowerCase().includes(q);
     return nameMatch || usernameMatch || teamMatch;
   });
 
@@ -106,7 +109,12 @@ export function ChatsListScreen({
     <div className="min-h-dvh bg-background">
       <DesktopSidebar />
 
-      <main className="min-h-dvh ml-20 px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6">
+      <main
+        className={cn(
+          "min-h-dvh px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6",
+          mobileNav === "sidebar" ? "ml-20" : "ml-0 pb-24 md:pb-[30px]",
+        )}
+      >
         <section className="min-h-[calc(100dvh-24px)] rounded-[20px] bg-dashboard-surface px-4 py-5 md:min-h-[calc(100dvh-60px)] md:rounded-[24px] md:px-6 md:py-7 lg:px-6">
           {/* Header */}
           <header className="flex items-center justify-between">
@@ -243,7 +251,8 @@ export function ChatsListScreen({
                       No direct messages yet
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Select a teammate from the right or click + to start a conversation.
+                      Select a teammate from the right or click + to start a
+                      conversation.
                     </p>
                   </div>
                 </div>
@@ -398,7 +407,8 @@ export function ChatsListScreen({
                 ))
               ) : (
                 <div className="py-6 text-center text-xs text-muted-foreground">
-                  No teammates found. Join a team or invite members to start chatting!
+                  No teammates found. Join a team or invite members to start
+                  chatting!
                 </div>
               )}
             </div>

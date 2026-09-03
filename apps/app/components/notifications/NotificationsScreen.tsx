@@ -14,6 +14,8 @@ import {
 import { useState } from "react";
 
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { useNavigation } from "@/components/navigation/NavigationProvider";
+import { cn } from "@/lib/utils";
 import type { NotificationItem } from "@/services/notification-service";
 
 function formatRelativeTime(dateString: string): string {
@@ -76,6 +78,7 @@ export function NotificationsScreen({
   initialNotifications,
   initialUnreadCount,
 }: NotificationsScreenProps) {
+  const { mobileNav } = useNavigation();
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(initialNotifications);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
@@ -108,16 +111,17 @@ export function NotificationsScreen({
     if (unreadCount === 0 || isMarkingAll) return;
 
     setIsMarkingAll(true);
-    // Optimistic update
-    setNotifications((current) => current.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
-
     try {
-      await fetch("/api/notifications", {
+      const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "mark-all-read" }),
       });
+
+      if (!res.ok) return;
+
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error("Failed to mark all as read:", error);
     } finally {
@@ -129,7 +133,12 @@ export function NotificationsScreen({
     <div className="min-h-dvh bg-background">
       <DesktopSidebar />
 
-      <main className="min-h-dvh ml-20 px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6">
+      <main
+        className={cn(
+          "min-h-dvh px-3 py-3 md:ml-[128px] md:px-0 md:py-[30px] md:pr-6",
+          mobileNav === "sidebar" ? "ml-20" : "ml-0 pb-24 md:pb-[30px]",
+        )}
+      >
         <section className="min-h-[calc(100dvh-24px)] rounded-[20px] bg-dashboard-surface px-4 py-5 md:min-h-[calc(100dvh-60px)] md:rounded-[24px] md:px-6 md:py-7 lg:px-6">
           <header className="flex items-center justify-between">
             <div className="flex items-center gap-3">

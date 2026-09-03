@@ -8,6 +8,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { DASHBOARD_NAVIGATION } from "@/data/navigation";
 import { getTeamNavigationId } from "@/services/team-client";
+import { useNavigation } from "@/components/navigation/NavigationProvider";
+import { BottomNav } from "@/components/layout/BottomNav";
 
 function LogoMark() {
   return (
@@ -28,6 +30,7 @@ function LogoMark() {
 }
 
 export function DesktopSidebar() {
+  const { mobileNav } = useNavigation();
   const pathname = usePathname();
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -111,54 +114,62 @@ export function DesktopSidebar() {
     pathname.startsWith("/profile") || pathname.startsWith("/settings");
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 flex w-20 flex-col items-center py-5 md:w-[128px] md:py-8 lg:w-[128px]">
-      <LogoMark />
-      <nav
-        className="mt-auto flex flex-col gap-4 md:gap-6"
-        aria-label="Primary navigation"
-      >
-        {DASHBOARD_NAVIGATION.map(({ label, href, icon: Icon }) => {
-          const active =
-            href === "/teams"
-              ? pathname.startsWith("/teams")
-              : pathname === href ||
-                (href !== "/" && pathname.startsWith(`${href}/`));
-
-          const isNotification = href === "/notifications";
-
-          return (
-            <Link
-              key={label}
-              href={href}
-              aria-label={label}
-              onClick={(event) => handleNavigation(event, href)}
-              className={`relative flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-primary/10 text-primary hover:bg-primary/20"
-              }`}
-            >
-              <Icon className="size-6 md:size-8" strokeWidth={2.5} />
-              {isNotification && unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold text-destructive-foreground">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-      <Link
-        href="/profile"
-        aria-label="My profile"
-        className={`mt-auto flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${
-          isProfileActive
-            ? "bg-primary text-primary-foreground"
-            : "bg-primary text-primary-foreground hover:opacity-90"
+    <>
+      <aside
+        className={`fixed inset-y-0 left-0 z-20 flex-col items-center py-5 md:flex md:w-[128px] md:py-8 lg:w-[128px] ${
+          mobileNav === "sidebar" ? "flex w-20" : "hidden md:flex"
         }`}
       >
-        <UserRound className="size-6 md:size-8" strokeWidth={2.5} />
-      </Link>
-    </aside>
+        <LogoMark />
+        <nav
+          className="mt-auto flex flex-col gap-4 md:gap-6"
+          aria-label="Primary navigation"
+        >
+          {DASHBOARD_NAVIGATION.map(({ label, href, icon: Icon }) => {
+            const active =
+              href === "/teams"
+                ? pathname.startsWith("/teams")
+                : pathname === href ||
+                  (href !== "/" && pathname.startsWith(`${href}/`));
+
+            const isNotification = href === "/notifications";
+
+            return (
+              <Link
+                key={label}
+                href={href}
+                aria-label={label}
+                onClick={(event) => handleNavigation(event, href)}
+                className={`relative flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/10 text-primary hover:bg-primary/20"
+                }`}
+              >
+                <Icon className="size-6 md:size-8" strokeWidth={2.5} />
+                {isNotification && unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold text-destructive-foreground">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+        <Link
+          href="/profile"
+          aria-label="My profile"
+          className={`mt-auto flex h-14 w-14 items-center justify-center rounded-[16px] transition-colors focus-visible:outline-2 focus-visible:outline-primary md:h-[72px] md:w-[72px] md:rounded-[18px] ${
+            isProfileActive
+              ? "bg-primary text-primary-foreground"
+              : "bg-primary text-primary-foreground hover:opacity-90"
+          }`}
+        >
+          <UserRound className="size-6 md:size-8" strokeWidth={2.5} />
+        </Link>
+      </aside>
+
+      {mobileNav === "bottom" && <BottomNav />}
+    </>
   );
 }

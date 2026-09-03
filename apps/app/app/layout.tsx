@@ -6,6 +6,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -96,11 +97,13 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          {children}
-          <ServiceWorkerRegister />
-          <OfflineIndicator />
-          <InstallPrompt />
-          <Analytics />
+          <NavigationProvider>
+            {children}
+            <ServiceWorkerRegister />
+            <OfflineIndicator />
+            <InstallPrompt />
+            <Analytics />
+          </NavigationProvider>
         </ThemeProvider>
       </body>
     </html>
