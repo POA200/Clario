@@ -43,6 +43,12 @@ export type ChannelMessage = {
   createdAt: string;
   updatedAt?: string;
   reactions?: MessageReactionSummary[];
+  replyTo?: {
+    id: string;
+    content: string;
+    senderName: string;
+    senderUsername?: string;
+  } | null;
   sender: {
     id: string;
     name: string;

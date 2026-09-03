@@ -185,14 +185,17 @@ export async function updateUserProfile(
 
         // Check uniqueness if changed
         if (cleanUsername.toLowerCase() !== (user.username?.toLowerCase() ?? "")) {
-          const existing = await prisma.user.findUnique({
-            where: { username: cleanUsername },
+          const existing = await prisma.user.findFirst({
+            where: {
+              username: { equals: cleanUsername, mode: "insensitive" },
+              id: { not: userId },
+            },
           });
 
-          if (existing && existing.id !== userId) {
+          if (existing) {
             return {
               success: false,
-              error: "This username is already taken. Please choose another.",
+              error: "Username is already taken. Please choose another.",
             };
           }
         }

@@ -54,6 +54,18 @@ export async function GET(request: Request, { params }: RouteContext) {
             userId: true,
           },
         },
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            sender: {
+              select: {
+                name: true,
+                username: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -79,6 +91,18 @@ export async function GET(request: Request, { params }: RouteContext) {
         createdAt: m.createdAt.toISOString(),
         updatedAt: m.updatedAt.toISOString(),
         reactions,
+        replyTo: m.replyTo
+          ? {
+              id: m.replyTo.id,
+              content: m.replyTo.content,
+              senderName:
+                m.replyTo.sender.name ||
+                (m.replyTo.sender.username
+                  ? `@${m.replyTo.sender.username}`
+                  : "Teammate"),
+              senderUsername: m.replyTo.sender.username ?? undefined,
+            }
+          : null,
         sender: {
           id: m.sender.id,
           name: m.sender.username
@@ -125,6 +149,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     const body = await request.json().catch(() => ({}));
     const content =
       typeof body.content === "string" ? body.content.trim() : "";
+    const replyToId = typeof body.replyToId === "string" ? body.replyToId : null;
 
     if (!content) {
       return NextResponse.json(
@@ -146,6 +171,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         type: "NORMAL",
         conversationId,
         senderId: session.user.id,
+        replyToId: replyToId ?? undefined,
       },
       include: {
         sender: {
@@ -154,6 +180,18 @@ export async function POST(request: Request, { params }: RouteContext) {
             name: true,
             username: true,
             image: true,
+          },
+        },
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            sender: {
+              select: {
+                name: true,
+                username: true,
+              },
+            },
           },
         },
       },
@@ -168,15 +206,15 @@ export async function POST(request: Request, { params }: RouteContext) {
         },
       });
 
-      if (recipientMember) {
-        const senderName =
-          message.sender.name ||
-          (message.sender.username
-            ? `@${message.sender.username}`
-            : "A teammate");
-        const snippet =
-          content.length > 100 ? `${content.substring(0, 100)}...` : content;
+      const senderName =
+        message.sender.name ||
+        (message.sender.username
+          ? `@${message.sender.username}`
+          : "A teammate");
+      const snippet =
+        content.length > 100 ? `${content.substring(0, 100)}...` : content;
 
+      if (recipientMember) {
         await createNotification({
           userId: recipientMember.userId,
           title: `Direct message from ${senderName}`,
@@ -184,6 +222,36 @@ export async function POST(request: Request, { params }: RouteContext) {
           type: "MESSAGE",
           link: `/dm/${session.user.id}`,
         });
+      }
+
+      // Check @mentions
+      const mentionMatches = [...content.matchAll(/@([a-zA-Z0-9_]+)/g)];
+      const mentionedUsernames = [
+        ...new Set(mentionMatches.map((m) => m[1]?.toLowerCase())),
+      ];
+
+      if (mentionedUsernames.length > 0) {
+        const mentionedUsers = await prisma.user.findMany({
+          where: {
+            username: { in: mentionedUsernames, mode: "insensitive" },
+            id: { not: session.user.id },
+          },
+          select: { id: true },
+        });
+
+        for (const u of mentionedUsers) {
+          if (recipientMember && u.id === recipientMember.userId) {
+            // Already notified via DM notification
+            continue;
+          }
+          await createNotification({
+            userId: u.id,
+            title: `${senderName} mentioned you`,
+            message: `"${snippet}"`,
+            type: "MESSAGE",
+            link: `/dm/${session.user.id}`,
+          });
+        }
       }
     } catch (notifErr) {
       console.error("[DM API] Error creating notification:", notifErr);
@@ -195,6 +263,18 @@ export async function POST(request: Request, { params }: RouteContext) {
           id: message.id,
           content: message.content,
           createdAt: message.createdAt.toISOString(),
+          replyTo: message.replyTo
+            ? {
+                id: message.replyTo.id,
+                content: message.replyTo.content,
+                senderName:
+                  message.replyTo.sender.name ||
+                  (message.replyTo.sender.username
+                    ? `@${message.replyTo.sender.username}`
+                    : "Teammate"),
+                senderUsername: message.replyTo.sender.username ?? undefined,
+              }
+            : null,
           sender: {
             id: message.sender.id,
             name: message.sender.username

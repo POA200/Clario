@@ -29,12 +29,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { username }] },
+    const existingEmail = await prisma.user.findUnique({
+      where: { email },
     });
-    if (existingUser) {
+    if (existingEmail) {
       return NextResponse.json(
-        { error: "That email or username is already in use." },
+        { error: "That email is already registered." },
+        { status: 409 },
+      );
+    }
+
+    const existingUsername = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: "insensitive" } },
+    });
+    if (existingUsername) {
+      return NextResponse.json(
+        { error: "Username is already taken. Please choose another." },
         { status: 409 },
       );
     }

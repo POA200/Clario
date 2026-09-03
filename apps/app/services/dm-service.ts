@@ -7,6 +7,12 @@ export type DMMessage = {
   content: string;
   createdAt: string;
   updatedAt?: string;
+  replyTo?: {
+    id: string;
+    content: string;
+    senderName: string;
+    senderUsername?: string;
+  } | null;
   sender: {
     id: string;
     name: string;
@@ -129,6 +135,18 @@ export async function getDMConversation(
             userId: true,
           },
         },
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            sender: {
+              select: {
+                name: true,
+                username: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -154,6 +172,18 @@ export async function getDMConversation(
         createdAt: m.createdAt.toISOString(),
         updatedAt: m.updatedAt.toISOString(),
         reactions,
+        replyTo: m.replyTo
+          ? {
+              id: m.replyTo.id,
+              content: m.replyTo.content,
+              senderName:
+                m.replyTo.sender.name ||
+                (m.replyTo.sender.username
+                  ? `@${m.replyTo.sender.username}`
+                  : "Teammate"),
+              senderUsername: m.replyTo.sender.username ?? undefined,
+            }
+          : null,
         sender: {
           id: m.sender.id,
           name: m.sender.username

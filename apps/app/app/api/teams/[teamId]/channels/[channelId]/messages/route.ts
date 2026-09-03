@@ -3,7 +3,10 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { createTeamNotification } from "@/services/notification-service";
+import {
+  createNotification,
+  createTeamNotification,
+} from "@/services/notification-service";
 
 type RouteContext = {
   params: Promise<{
@@ -79,6 +82,18 @@ export async function GET(request: Request, { params }: RouteContext) {
               userId: true,
             },
           },
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              sender: {
+                select: {
+                  name: true,
+                  username: true,
+                },
+              },
+            },
+          },
         },
       }),
       prisma.task.findMany({
@@ -115,6 +130,18 @@ export async function GET(request: Request, { params }: RouteContext) {
           createdAt: m.createdAt.toISOString(),
           updatedAt: m.updatedAt.toISOString(),
           reactions,
+          replyTo: m.replyTo
+            ? {
+                id: m.replyTo.id,
+                content: m.replyTo.content,
+                senderName:
+                  m.replyTo.sender.name ||
+                  (m.replyTo.sender.username
+                    ? `@${m.replyTo.sender.username}`
+                    : "Teammate"),
+                senderUsername: m.replyTo.sender.username ?? undefined,
+              }
+            : null,
           sender: {
             id: m.sender.id,
             name: m.sender.username
@@ -171,6 +198,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const body = await request.json();
     const content = typeof body.content === "string" ? body.content.trim() : "";
+    const replyToId = typeof body.replyToId === "string" ? body.replyToId : null;
 
     if (!content) {
       return NextResponse.json({ error: "Message content is required" }, { status: 400 });
@@ -196,6 +224,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         type,
         channelId,
         senderId: session.user.id,
+        replyToId: replyToId ?? undefined,
         ...(parsedDeadline ? { deadline: parsedDeadline } : {}),
       },
       include: {
@@ -207,8 +236,73 @@ export async function POST(request: Request, { params }: RouteContext) {
             image: true,
           },
         },
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            sender: {
+              select: {
+                name: true,
+                username: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    const senderDisplayName =
+      message.sender.name ||
+      (message.sender.username
+        ? `@${message.sender.username}`
+        : "A teammate");
+
+    // Check @mentions and trigger notifications
+    try {
+      const mentionMatches = [...content.matchAll(/@([a-zA-Z0-9_]+)/g)];
+      const mentionedUsernames = [
+        ...new Set(mentionMatches.map((m) => m[1]?.toLowerCase())),
+      ];
+
+      if (mentionedUsernames.length > 0) {
+        const mentionedUsers = await prisma.user.findMany({
+          where: {
+            username: { in: mentionedUsernames, mode: "insensitive" },
+            id: { not: session.user.id },
+          },
+          select: { id: true },
+        });
+
+        for (const u of mentionedUsers) {
+          await createNotification({
+            userId: u.id,
+            title: `${senderDisplayName} mentioned you`,
+            message: `${senderDisplayName} mentioned you in #${channel.name}: "${content.substring(0, 100)}"`,
+            type: "MESSAGE",
+            link: `/teams/${teamId}/channels/${channelId}`,
+          });
+        }
+      }
+
+      // If replying to someone else's message, notify them
+      if (replyToId && message.replyTo) {
+        const original = await prisma.message.findUnique({
+          where: { id: replyToId },
+          select: { senderId: true },
+        });
+        if (original && original.senderId !== session.user.id) {
+          await createNotification({
+            userId: original.senderId,
+            title: `${senderDisplayName} replied to your message`,
+            message: `"${content.substring(0, 100)}" in #${channel.name}`,
+            type: "MESSAGE",
+            link: `/teams/${teamId}/channels/${channelId}`,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error("Error creating mention/reply notification:", notifErr);
+    }
 
     // If it's a TASK, sync it to the team's tasks list
     if (type === "TASK") {
@@ -242,8 +336,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
 
     // Notify other team members
-    const senderDisplayName =
-      message.sender.name || (message.sender.username ? `@${message.sender.username}` : "A teammate");
     let notifTitle = `#${channel.name}`;
     let notifType = "MESSAGE";
     let notifLink = `/teams/${teamId}/channels/${channelId}`;

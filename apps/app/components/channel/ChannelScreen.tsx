@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   MoreVertical,
   Pencil,
+  Reply,
   Search,
   Send,
   Trash2,
@@ -35,6 +36,26 @@ const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"] as co
 function isWithinOneHour(isoDate: string): boolean {
   const ageMs = Date.now() - new Date(isoDate).getTime();
   return ageMs <= 60 * 60 * 1000;
+}
+
+function renderFormattedContent(text: string) {
+  const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("@")) {
+      const username = part.substring(1);
+      return (
+        <Link
+          key={index}
+          href={`/profile/${username}`}
+          className="font-semibold text-primary underline underline-offset-2 hover:opacity-80"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </Link>
+      );
+    }
+    return part;
+  });
 }
 
 const MESSAGE_TYPE_OPTIONS: { value: MessageType; label: string }[] = [
@@ -113,6 +134,10 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   const [isSending, setIsSending] = useState(false);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
 
+  // Reply & Mention States
+  const [replyingTo, setReplyingTo] = useState<ChannelMessage | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -141,6 +166,43 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
   const optionsMenuRef = useRef<HTMLDivElement>(null);
   const messageMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const matchingMembers =
+    mentionQuery !== null
+      ? channel.members.filter((m) => {
+          const usernameMatch = m.username
+            ?.toLowerCase()
+            .includes(mentionQuery);
+          const nameMatch = m.name?.toLowerCase().includes(mentionQuery);
+          return usernameMatch || nameMatch;
+        })
+      : [];
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setContent(value);
+    const cursor = e.target.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursor);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+    if (match) {
+      setMentionQuery(match[1].toLowerCase());
+    } else {
+      setMentionQuery(null);
+    }
+  }
+
+  function handleSelectMention(usernameOrName: string) {
+    const cursor = inputRef.current?.selectionStart ?? content.length;
+    const textBefore = content.slice(0, cursor);
+    const textAfter = content.slice(cursor);
+    const newTextBefore = textBefore.replace(
+      /@([a-zA-Z0-9_]*)$/,
+      `@${usernameOrName} `,
+    );
+    setContent(newTextBefore + textAfter);
+    setMentionQuery(null);
+    inputRef.current?.focus();
+  }
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -270,6 +332,10 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
         type: messageType,
       };
 
+      if (replyingTo) {
+        body.replyToId = replyingTo.id;
+      }
+
       if (messageType === "TASK" && deadline) {
         body.deadline = deadline;
       }
@@ -301,6 +367,8 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
       setContent("");
       setDeadline("");
       setMessageType("NORMAL");
+      setReplyingTo(null);
+      setMentionQuery(null);
       inputRef.current?.focus();
     } catch {
       setError("Unable to send message. Please try again.");
@@ -837,6 +905,19 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                             </div>
 
                             <div className="space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuMessageId(null);
+                                  setReplyingTo(message);
+                                  inputRef.current?.focus();
+                                }}
+                                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                              >
+                                <Reply className="size-3.5 text-muted-foreground" />
+                                <span>Reply</span>
+                              </button>
+
                               {canEdit && (
                                 <button
                                   type="button"
@@ -914,6 +995,19 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                       </div>
                     ) : (
                       <div>
+                        {/* Quoted Reply Preview */}
+                        {message.replyTo && (
+                          <div className="mb-1.5 flex items-center gap-1.5 rounded-lg border-l-2 border-primary bg-primary/10 px-2.5 py-1 text-xs text-muted-foreground">
+                            <Reply className="size-3 shrink-0 text-primary" />
+                            <span className="font-semibold text-primary text-[11px] shrink-0">
+                              {message.replyTo.senderName}:
+                            </span>
+                            <span className="truncate text-[11px] text-foreground/80">
+                              {message.replyTo.content}
+                            </span>
+                          </div>
+                        )}
+
                         <div
                           className={`mt-1 rounded-xl border-l-4 p-3.5 shadow-2xs transition-colors ${styles.bg} ${styles.border}`}
                         >
@@ -958,7 +1052,7 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
                           <p
                             className={`text-sm text-foreground whitespace-pre-wrap break-words ${message.type === "TASK" && message.completed ? "line-through text-muted-foreground" : ""}`}
                           >
-                            {message.content}
+                            {renderFormattedContent(message.content)}
                           </p>
                         </div>
 
@@ -1006,7 +1100,73 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
       </div>
 
       {/* Composer */}
-      <div className="shrink-0 border-t border-border bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:px-6">
+      <div className="relative shrink-0 border-t border-border bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:px-6">
+        {/* Reply Bar */}
+        {replyingTo && (
+          <div className="mb-2 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-3.5 py-2 text-xs animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className="flex items-center gap-2 min-w-0">
+              <Reply className="size-4 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <p className="font-semibold text-primary">
+                  Replying to {replyingTo.sender.name}
+                </p>
+                <p className="truncate text-muted-foreground text-[11px]">
+                  {replyingTo.content}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              aria-label="Cancel reply"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground transition-colors"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Mention Autocomplete Suggestions Dropdown */}
+        {mentionQuery !== null && matchingMembers.length > 0 && (
+          <div className="absolute bottom-full left-4 right-4 z-40 mb-2 max-h-48 overflow-y-auto rounded-2xl border border-border bg-background p-1.5 shadow-xl md:left-6 md:max-w-md animate-in fade-in zoom-in-95 duration-100">
+            <p className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+              Mention Teammate
+            </p>
+            {matchingMembers.map((member) => (
+              <button
+                key={member.id}
+                type="button"
+                onClick={() =>
+                  handleSelectMention(member.username || member.name)
+                }
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted"
+              >
+                {member.image ? (
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="size-6 rounded-full object-cover border border-border"
+                  />
+                ) : (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+                    {(member.username || member.name).charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-foreground truncate block">
+                    {member.name}
+                  </span>
+                  {member.username && (
+                    <span className="text-[11px] text-muted-foreground">
+                      @{member.username}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
         <form onSubmit={handleSend} className="flex items-center gap-2">
           {/* Type selector */}
           <div className="relative shrink-0" ref={typeMenuRef}>
@@ -1062,11 +1222,11 @@ export function ChannelScreen({ channel, currentUser }: ChannelScreenProps) {
           <Input
             ref={inputRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={handleInputChange}
             placeholder={
               messageType === "TASK"
                 ? "Describe task to create..."
-                : "Write a message..."
+                : "Write a message... (Type @ to mention)"
             }
             disabled={isSending}
             maxLength={4000}
