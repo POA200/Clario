@@ -137,11 +137,19 @@ export function DashboardScreen({ teams: initialTeams }: DashboardScreenProps) {
                 href={`/teams/${team.id}`}
                 className="flex items-center gap-3 rounded-2xl p-1 transition-colors hover:bg-background/50 focus-visible:outline-2 focus-visible:outline-primary md:gap-4"
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary md:h-[58px] md:w-[58px]">
-                  <Users className="size-4 md:size-8" strokeWidth={1.8} />
-                </span>
+                {team.avatar ? (
+                  <img
+                    src={team.avatar}
+                    alt={team.name}
+                    className="size-12 rounded-full object-cover border border-border md:size-[58px] shadow-xs shrink-0"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary md:h-[58px] md:w-[58px]">
+                    <Users className="size-5 md:size-8" strokeWidth={1.8} />
+                  </span>
+                )}
 
-                <span className="text-md font-semibold tracking-tight text-foreground md:text-lg">
+                <span className="text-md font-semibold tracking-tight text-foreground md:text-lg truncate">
                   {team.name}
                 </span>
               </Link>
